@@ -1,0 +1,30 @@
+{
+  "name": "request-manager",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.4.5",
+    "@babel/preset-env": "^7.4.5",
+    "@babel/preset-typescript": "^7.3.3",
+    "@types/jest": "^24.0.15",
+    "@types/lodash": "^4.14.135",
+    "axios": "^0.19.0",
+    "axios-mock-adapter": "^1.16.0",
+    "babel-jest": "^24.8.0",
+    "jest": "^24.8.0",
+    "jest-fetch-mock": "^2.1.2",
+    "typescript": "^3.5.2"
+  },
+  "jest": {
+    "automock": false,
+    "setupFiles": [
+      "./setupJest.ts"
+    ]
+  }
+}

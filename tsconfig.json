@@ -1,0 +1,22 @@
+{
+	"compilerOptions": {
+		"baseUrl": "./src",
+		"rootDir": "./src",
+		"outDir": "./build",
+		"module": "commonjs",
+		"target": "es5",
+		"lib": ["es7", "dom"],
+		"sourceMap": true,
+		"noImplicitAny": true,
+		"noImplicitReturns": true,
+		"noImplicitThis": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"strictNullChecks": true,
+		"moduleResolution": "node",
+		"declaration": true
+	},
+	"include": [
+		"./src/**/*"
+	]
+}
