@@ -3,9 +3,9 @@
 		"baseUrl": "./src",
 		"rootDir": "./src",
 		"outDir": "./build",
-		"module": "commonjs",
-		"target": "es5",
-		"lib": ["es7", "dom"],
+		"module": "ESNext",
+		"target": "ES2020",
+		"lib": ["ES2020", "dom"],
 		"sourceMap": true,
 		"noImplicitAny": true,
 		"noImplicitReturns": true,
@@ -14,7 +14,9 @@
 		"noUnusedParameters": true,
 		"strictNullChecks": true,
 		"moduleResolution": "node",
-		"declaration": true
+		"declaration": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true
 	},
 	"include": [
 		"./src/**/*"
