@@ -1,41 +1,39 @@
 import RequestAdapter from "./RequestAdapter";
 import FetchRequestAdapter from "./adapters/FetchRequestAdapter";
-import { IRequestResult, IBaseRequestEntity } from "./models/RequestParams";
-import { IErrorHandler, IResultHandler } from "./models/Handlers";
+import { IRequestResult, BasePipelineStage } from "./models/RequestParams";
+import { ErrorHandler, ResultHandler } from "./models/Handlers";
 
-export default abstract class RequestManager {
+export default abstract class RequestFlow {
+  protected requestList: BasePipelineStage[] = [];
+  protected errorHandler: ErrorHandler;
+  protected resultHandler: ResultHandler;
+  protected finishHandler: VoidFunction;
+  protected adapter: RequestAdapter = new FetchRequestAdapter();
 
-    protected requestList: IBaseRequestEntity[] = [];
-    protected errorHandler: IErrorHandler;
-    protected resultHandler: IResultHandler;
-    protected finishHandler: VoidFunction;
-    protected adapter: RequestAdapter = new FetchRequestAdapter();
+  public abstract execute(): Promise<IRequestResult>;
 
-    public abstract execute (): Promise<IRequestResult>;
+  public setRequestAdapter(adapter: RequestAdapter): RequestFlow {
+    this.adapter = adapter;
+    return this;
+  }
 
-    public setRequestAdapter (adapter: RequestAdapter): RequestManager {
-        this.adapter = adapter;
-        return this;
-    }
+  public addAll(requestList = []): RequestFlow {
+    this.requestList = this.requestList.concat(requestList);
+    return this;
+  }
 
-    public addAll (requestList = []): RequestManager {
-        this.requestList = this.requestList.concat(requestList);
-        return this;
-    }
+  public withErrorHandler(errorHandler: ErrorHandler): RequestFlow {
+    this.errorHandler = errorHandler;
+    return this;
+  }
 
-    public withErrorHandler(errorHandler: IErrorHandler): RequestManager {
-        this.errorHandler = errorHandler;
-        return this;
-    }
+  public withResultHandler(resultHandler: ResultHandler): RequestFlow {
+    this.resultHandler = resultHandler;
+    return this;
+  }
 
-    public withResultHandler(resultHandler: IResultHandler): RequestManager {
-        this.resultHandler = resultHandler;
-        return this;
-    }
-
-    public withFinishHandler(finishHandler: VoidFunction): RequestManager {
-        this.finishHandler = finishHandler;
-        return this;
-    }
-
+  public withFinishHandler(finishHandler: VoidFunction): RequestFlow {
+    this.finishHandler = finishHandler;
+    return this;
+  }
 }

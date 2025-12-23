@@ -1,6 +1,15 @@
-import type RequestManager from "core/RequestManager";
+import type RequestFlow from "core/RequestManager";
 
-type HttpMethods = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+type HttpMethods =
+  | "GET"
+  | "POST"
+  | "PATCH"
+  | "PUT"
+  | "DELETE"
+  | "HEAD"
+  | "OPTIONS"
+  | "CONNECT"
+  | "TRACE";
 
 export interface IRequestConfig {
   url: string;
@@ -13,19 +22,20 @@ export interface IRequestConfigFactory<Result> {
   (previousResult: Result): IRequestConfig;
 }
 
-export interface IBaseRequestEntity<Result> {
+export interface BasePipelineStage<Result> {
   precondition?: () => boolean;
   result?: Result;
   mapper?: (result: IRequestResult) => Result;
 }
 
-export interface IRequestEntity<Result> extends IBaseRequestEntity<Result> {
+export interface PipelineRequestStage<Result>
+  extends BasePipelineStage<Result> {
   config: IRequestConfig | IRequestConfigFactory<Result>;
 }
 
-export interface IRequestManagerEntity<Result>
-  extends IBaseRequestEntity<Result> {
-  request: RequestManager;
+export interface PipelineManagerStage<Result>
+  extends BasePipelineStage<Result> {
+  request: RequestFlow;
 }
 
 export type IRequestResult = {};

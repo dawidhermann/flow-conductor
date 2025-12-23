@@ -1,10 +1,9 @@
 import { IRequestResult } from "./RequestParams";
 
-
-export interface IErrorHandler {
-    (error: Error): void;
+export interface ErrorHandler {
+  (error: Error): void;
 }
 
-export interface IResultHandler {
-    (result: IRequestResult): void;
+export interface ResultHandler {
+  (result: IRequestResult): void;
 }

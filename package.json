@@ -1,9 +1,17 @@
 {
-  "name": "request-manager",
+  "name": "flow-pipe",
   "version": "1.0.0",
   "type": "module",
-  "description": "",
+  "description": "A library for creating and managing request chains.",
   "main": "index.js",
+  "tags": [
+    "flow",
+    "pipe",
+    "request",
+    "chain",
+    "manager",
+    "adapter"
+  ],
   "scripts": {
     "test": "node --test --import tsx/esm 'src/core/__test__/**/*.test.ts'"
   },
