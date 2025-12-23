@@ -1,4 +1,4 @@
-import type RequestFlow from "core/RequestManager";
+import RequestFlow from "../RequestManager";
 
 type HttpMethods =
   | "GET"

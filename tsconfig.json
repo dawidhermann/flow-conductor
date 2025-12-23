@@ -16,9 +16,11 @@
 		"moduleResolution": "node",
 		"declaration": true,
 		"esModuleInterop": true,
-		"allowSyntheticDefaultImports": true
+		"allowSyntheticDefaultImports": true,
+		"paths": {
+			"@flow-pipe": ["./src/core/*"]
+		}
 	},
-	"include": [
-		"./src/**/*"
-	]
+	"include": ["./src/**/*"],
+	"exclude": ["./src/core/__test__/**/*"]
 }

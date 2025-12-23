@@ -13,10 +13,15 @@
     "adapter"
   ],
   "scripts": {
-    "test": "node --test --import tsx/esm 'src/core/__test__/**/*.test.ts'"
+    "test": "node --test --import tsx/esm 'src/core/__test__/**/*.test.ts'",
+    "build": "tsc"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Dawid Hermann",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dawidhermann/flow-pipe.git"
+  },
   "devDependencies": {
     "tsx": "^4.7.0",
     "typescript": "^5.9.3"

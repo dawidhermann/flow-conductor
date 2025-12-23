@@ -3,19 +3,20 @@ import {
   IRequestResult,
   IRequestConfig,
   PipelineRequestStage,
+  PipelineManagerStage,
 } from "./models/RequestParams";
 
 export default class RequestChain extends RequestFlow {
   //  #region Public methods
 
-  public static begin = <T extends PipelineRequestStage>(
+  public static begin = <T extends PipelineRequestStage<IRequestResult>>(
     requestEntity: T
   ): RequestChain => {
     const requestChain: RequestChain = new RequestChain();
     return requestChain.next(requestEntity);
   };
 
-  public next = <T extends PipelineRequestStage>(
+  public next = <T extends PipelineRequestStage<IRequestResult>>(
     requestEntity: T
   ): RequestChain => {
     return this.addRequestEntity(requestEntity);
@@ -77,7 +78,7 @@ export default class RequestChain extends RequestFlow {
 
   //  #region Private methods
 
-  private addRequestEntity = <T extends PipelineRequestStage>(
+  private addRequestEntity = <T extends PipelineRequestStage<IRequestResult>>(
     requestEntity: T
   ): RequestChain => {
     this.requestList.push(requestEntity);
@@ -85,15 +86,18 @@ export default class RequestChain extends RequestFlow {
   };
 
   private executeAllRequests = async (
-    requestEntityList: PipelineStage[]
+    requestEntityList: (
+      | PipelineRequestStage<IRequestResult>
+      | PipelineManagerStage<IRequestResult>
+    )[]
   ): Promise<IRequestResult[]> => {
     const results: IRequestResult[] = [];
     for (let i = 0; i < requestEntityList.length; i++) {
-      const requestEntity: PipelineRequestStage = requestEntityList[i];
+      const requestEntity:
+        | PipelineRequestStage<IRequestResult>
+        | PipelineManagerStage<IRequestResult> = requestEntityList[i];
       const previousEntity = requestEntityList[i - 1];
-      const previousResult: IRequestResult | undefined = previousEntity
-        ? previousEntity.result
-        : undefined;
+      const previousResult: IRequestResult | undefined = previousEntity?.result;
       const requestResult: IRequestResult = await this.executeSingle(
         requestEntity,
         previousResult
@@ -108,19 +112,21 @@ export default class RequestChain extends RequestFlow {
   };
 
   private executeSingle = async (
-    requestEntity: PipelineRequestStage,
+    requestEntity:
+      | PipelineRequestStage<IRequestResult>
+      | PipelineManagerStage<IRequestResult>,
     previousResult?: any
   ): Promise<IRequestResult> => {
-    if ((requestEntity as PipelineRequestStage).config) {
-      const { config } = requestEntity as PipelineRequestStage;
+    if (isPipelineRequestStage(requestEntity)) {
+      const { config } = requestEntity;
       const requestConfig: IRequestConfig =
         typeof config === "function" ? config(previousResult) : config;
       const rawResult: IRequestResult = await this.adapter.executeRequest(
         requestConfig
       );
       return this.adapter.getResult(rawResult);
-    } else if ((requestEntity as IRequestManagerEntity).request) {
-      const { request } = requestEntity as IRequestManagerEntity;
+    } else if (isPipelineManagerStage(requestEntity)) {
+      const { request } = requestEntity;
       const rawResult: IRequestResult = await request.execute();
       return this.adapter.getResult(rawResult);
     } else {
@@ -131,9 +137,25 @@ export default class RequestChain extends RequestFlow {
   //  #endregion
 }
 
-export function begin<T extends PipelineRequestStage>(
+export function begin<T extends PipelineRequestStage<IRequestResult>>(
   requestEntity: T
 ): RequestChain {
   const requestChain: RequestChain = new RequestChain();
   return requestChain.next(requestEntity);
+}
+
+function isPipelineRequestStage(
+  requestEntity:
+    | PipelineRequestStage<IRequestResult>
+    | PipelineManagerStage<IRequestResult>
+): requestEntity is PipelineRequestStage<IRequestResult> {
+  return "config" in requestEntity;
+}
+
+function isPipelineManagerStage(
+  requestEntity:
+    | PipelineRequestStage<IRequestResult>
+    | PipelineManagerStage<IRequestResult>
+): requestEntity is PipelineManagerStage<IRequestResult> {
+  return "request" in requestEntity;
 }

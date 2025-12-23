@@ -1,10 +1,17 @@
 import RequestAdapter from "./RequestAdapter";
 import FetchRequestAdapter from "./adapters/FetchRequestAdapter";
-import { IRequestResult, BasePipelineStage } from "./models/RequestParams";
+import {
+  IRequestResult,
+  PipelineManagerStage,
+  PipelineRequestStage,
+} from "./models/RequestParams";
 import { ErrorHandler, ResultHandler } from "./models/Handlers";
 
 export default abstract class RequestFlow {
-  protected requestList: BasePipelineStage[] = [];
+  protected requestList: (
+    | PipelineRequestStage<IRequestResult>
+    | PipelineManagerStage<IRequestResult>
+  )[] = [];
   protected errorHandler: ErrorHandler;
   protected resultHandler: ResultHandler;
   protected finishHandler: VoidFunction;
