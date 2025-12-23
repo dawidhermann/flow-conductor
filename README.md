@@ -22,14 +22,23 @@ npm install flow-pipe
 
 ### Simple GET Request
 
-```typescript
-import RequestChain from 'flow-pipe';
+You can start a request chain using either `RequestChain.begin()` or the exported `begin()` function:
 
-const result = await RequestChain.begin({
+```typescript
+import RequestChain, { begin } from 'flow-pipe';
+
+// Using RequestChain.begin()
+const result1 = await RequestChain.begin({
   config: { url: 'http://example.com/users', method: 'GET' }
 }).execute();
 
-console.log(result.body); // Response body
+// Using the begin() function (alternative syntax)
+const result2 = await begin({
+  config: { url: 'http://example.com/users', method: 'GET' }
+}).execute();
+
+console.log(result1.body); // Response body
+console.log(result2.body); // Response body
 ```
 
 ### Multiple Chained Requests
@@ -65,6 +74,26 @@ const result = await RequestChain.begin({
 
 // Returns the result of the last request
 console.log(result.body);
+```
+
+You can also use the exported `begin()` function for a more concise syntax:
+
+```typescript
+import { begin } from 'flow-pipe';
+
+const result = await begin({
+  config: { url: 'http://example.com/users', method: 'GET' }
+})
+  .next({
+    config: (previousResult) => {
+      const user = JSON.parse(previousResult.body);
+      return { 
+        url: `http://example.com/users/${user.id}/posts`, 
+        method: 'GET' 
+      };
+    }
+  })
+  .execute();
 ```
 
 ### Using Previous Results
@@ -342,6 +371,22 @@ const result = await RequestChain.begin({
 console.log(result.body);
 ```
 
+Alternatively, using the `begin()` function:
+
+```typescript
+import { begin } from 'flow-pipe';
+
+const nestedChain = begin({
+  config: { url: 'http://example.com/users', method: 'GET' }
+});
+
+const result = await begin({
+  config: { url: 'http://example.com/users', method: 'GET' }
+})
+  .next({ request: nestedChain })
+  .execute();
+```
+
 ## Custom Adapters
 
 Use custom request adapters to extend functionality:
@@ -386,17 +431,21 @@ console.log(result.customParam); // 'testParam'
 
 #### Static Methods
 
-- `RequestChain.begin<T>(requestEntity: T): RequestChain` - Start a new request chain
+- `RequestChain.begin<T extends PipelineRequestStage>(requestEntity: T): RequestChain` - Start a new request chain
 
 #### Instance Methods
 
-- `next<T>(requestEntity: T): RequestChain` - Add the next request to the chain
+- `next<T extends PipelineRequestStage>(requestEntity: T): RequestChain` - Add the next request to the chain
 - `execute(): Promise<IRequestResult>` - Execute the chain and return the last result
 - `executeAll(): Promise<IRequestResult[]>` - Execute all requests and return all results
 - `setRequestAdapter(adapter: RequestAdapter): RequestManager` - Set a custom request adapter
 - `withResultHandler(handler: IResultHandler): RequestManager` - Set result handler
 - `withErrorHandler(handler: IErrorHandler): RequestManager` - Set error handler
 - `withFinishHandler(handler: VoidFunction): RequestManager` - Set finish handler
+
+### Exported Functions
+
+- `begin<T extends PipelineRequestStage>(requestEntity: T): RequestChain` - Alternative function to start a request chain (same as `RequestChain.begin`)
 
 ### Types
 
@@ -405,19 +454,19 @@ console.log(result.customParam); // 'testParam'
 ```typescript
 interface IRequestConfig {
   url: string;
-  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'CONNECT' | 'TRACE';
   data?: any;
   [key: string]: any;
 }
 ```
 
-#### IRequestEntity
+#### PipelineRequestStage
 
 ```typescript
-interface IRequestEntity {
-  config: IRequestConfig | IRequestConfigFactory;
+interface PipelineRequestStage<Result> {
+  config: IRequestConfig | IRequestConfigFactory<Result>;
   precondition?: () => boolean;
-  mapper?: (result: IRequestResult) => any;
+  mapper?: (result: IRequestResult) => Result;
 }
 ```
 
@@ -433,13 +482,13 @@ interface IRequestConfigFactory<Result> {
 
 This allows each step in the chain to dynamically build its request based on the previous step's result.
 
-#### IRequestManagerEntity
+#### PipelineManagerStage
 
 ```typescript
-interface IRequestManagerEntity {
+interface PipelineManagerStage<Result> {
   request: RequestManager;
   precondition?: () => boolean;
-  mapper?: (result: IRequestResult) => any;
+  mapper?: (result: IRequestResult) => Result;
 }
 ```
 
