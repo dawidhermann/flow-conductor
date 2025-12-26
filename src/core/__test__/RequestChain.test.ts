@@ -6,41 +6,67 @@ import type {
   PipelineRequestStage,
 } from "core/models/RequestParams";
 import type { ResultHandler } from "core/models/Handlers";
-import RequestAdapter from "core/RequestAdapter";
-import TestAdapter from "./__mocks__/TestAdapter";
+import type RequestAdapter from "core/RequestAdapter";
 import fetchMock, {
   resetFetchMock,
   fetchMockToBeCalledWith,
 } from "./__mocks__/fetchMock";
+import type { FetchRequestConfig } from "core/adapters/FetchRequestAdapter";
+import FetchRequestAdapter from "core/adapters/FetchRequestAdapter";
+import TestAdapter from "./__mocks__/TestAdapter";
 
 const firstUser = { id: 1, name: "John Smith" };
 const secondUser = { id: 2, name: "Bruce Wayne" };
 const thirdUser = { id: 3, name: "Tony Stark" };
 
+// Extended request result type based on actual usage in tests
+interface TestRequestResult<T> extends IRequestResult {
+  body: string;
+  customParam?: string;
+  json: () => Promise<T>;
+}
+
 // Mock function utility to replace jest.fn()
-function createMockFn() {
-  const calls: any[] = [];
-  const fn = (...args: any[]) => {
+interface MockFunction {
+  (...args: unknown[]): void;
+  calls: unknown[][];
+  toHaveBeenCalled: () => boolean;
+  toHaveBeenCalledTimes: (n: number) => boolean;
+}
+
+function createMockFn(): MockFunction {
+  const calls: unknown[][] = [];
+  const fn = (...args: unknown[]) => {
     calls.push(args);
   };
-  fn.calls = calls;
-  fn.toHaveBeenCalled = () => calls.length > 0;
-  fn.toHaveBeenCalledTimes = (n: number) => calls.length === n;
-  return fn;
+  (fn as MockFunction).calls = calls;
+  (fn as MockFunction).toHaveBeenCalled = () => calls.length > 0;
+  (fn as MockFunction).toHaveBeenCalledTimes = (n: number) =>
+    calls.length === n;
+  return fn as MockFunction;
 }
 
 // Setup fetch mock globally
-(global as any).fetch = fetchMock.fetch.bind(fetchMock);
+(globalThis as { fetch?: typeof fetch }).fetch =
+  fetchMock.fetch.bind(fetchMock);
 
 describe("Request chain test", () => {
   test("Basic GET request", async () => {
     resetFetchMock();
     const response: string = JSON.stringify(firstUser);
     fetchMock.mockResponseOnce(response);
-    const result: any = await RequestChain.begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    }).execute();
-    assert.strictEqual(result.body, response);
+    const result = await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    ).execute();
+    const jsonResult = await result.json();
+    assert.deepStrictEqual(jsonResult, firstUser);
     assert.ok(
       fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
     );
@@ -52,16 +78,24 @@ describe("Request chain test", () => {
       .once(JSON.stringify(firstUser))
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
-    const result: any = await RequestChain.begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
-      .next<PipelineRequestStage>({
-        config: { url: "http://example.com/users", method: "GET" },
-      })
-      .next<PipelineRequestStage>({
-        config: { url: "http://example.com/users", method: "GET" },
-      })
-      .execute();
+    const result: TestRequestResult<typeof thirdUser> =
+      await RequestChain.begin<
+        TestRequestResult<typeof thirdUser>,
+        Response,
+        FetchRequestConfig
+      >(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+        },
+        new FetchRequestAdapter()
+      )
+        .next<TestRequestResult<typeof secondUser>>({
+          config: { url: "http://example.com/users", method: "GET" },
+        })
+        .next<TestRequestResult<typeof thirdUser>>({
+          config: { url: "http://example.com/users", method: "GET" },
+        })
+        .execute();
     assert.strictEqual(result.body, JSON.stringify(thirdUser));
     assert.ok(
       fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
@@ -74,15 +108,23 @@ describe("Request chain test", () => {
       .once(JSON.stringify(firstUser))
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
-    const result = await RequestChain.begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
-      .next<PipelineRequestStage>({
+    const result = await RequestChain.begin<
+      typeof firstUser,
+      Response,
+      FetchRequestConfig
+    >(
+      {
         config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
+      .next<typeof firstUser>({
+        config: { url: "http://example.com/users", method: "GET" },
+        mapper: (result: Response) => JSON.parse(result.body as any),
       })
-      .next<PipelineRequestStage>({
+      .next<string>({
         config: { url: "http://example.com/users", method: "GET" },
-        mapper: (result: any) => JSON.parse(result.body).name,
+        mapper: (result: Response) => JSON.parse(result.body as any).name,
       })
       .execute();
     assert.strictEqual(result, thirdUser.name);
@@ -97,11 +139,21 @@ describe("Handlers test", () => {
     resetFetchMock();
     const response: string = JSON.stringify(firstUser);
     fetchMock.mockResponseOnce(response);
-    await RequestChain.begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
+    await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
       .withResultHandler((result: IRequestResult): void => {
-        assert.strictEqual((result as any).body, response);
+        assert.strictEqual(
+          (result as TestRequestResult<typeof firstUser>).body,
+          response
+        );
         assert.ok(
           fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
         );
@@ -112,9 +164,16 @@ describe("Handlers test", () => {
   test("Error handler test", async () => {
     resetFetchMock();
     fetchMock.mockReject(new Error("fake error message"));
-    await RequestChain.begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
+    await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
       .withErrorHandler((error: Error): void => {
         assert.strictEqual(error.message, "fake error message");
       })
@@ -128,9 +187,16 @@ describe("Handlers test", () => {
     resetFetchMock();
     fetchMock.mockReject(new Error("fake error message"));
     const finishHandler = createMockFn();
-    await RequestChain.begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
+    await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
       .withErrorHandler((error: Error): void => {
         assert.strictEqual(error.message, "fake error message");
       })
@@ -148,9 +214,16 @@ describe("Handlers test", () => {
     const resultHandler = createMockFn();
     const errorHandler = createMockFn();
     const finishHandler = createMockFn();
-    await RequestChain.begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
+    await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
       .withResultHandler(resultHandler)
       .withErrorHandler(errorHandler)
       .withFinishHandler(finishHandler)
@@ -171,20 +244,39 @@ describe("Returning all requests", () => {
       .once(JSON.stringify(firstUser))
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
-    const result: any[] = await RequestChain.begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
-      .next<PipelineRequestStage>({
+    const result = await RequestChain.begin<
+      string,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
+      .next<TestRequestResult<typeof firstUser>>({
         config: { url: "http://example.com/users", method: "GET" },
       })
-      .next<PipelineRequestStage>({
+      .next<string>({
         config: { url: "http://example.com/users", method: "GET" },
-        mapper: (result: any) => JSON.parse(result.body).name,
+        mapper: (result: Response) => JSON.parse(result.body as any).name,
       })
-      .executeAll();
-    assert.strictEqual(JSON.parse(result[0].body).name, firstUser.name);
-    assert.strictEqual(JSON.parse(result[1].body).name, secondUser.name);
-    assert.strictEqual(result[2] as string, thirdUser.name);
+      .executeAll<
+        [
+          TestRequestResult<typeof firstUser>,
+          TestRequestResult<typeof secondUser>,
+          string
+        ]
+      >();
+    assert.strictEqual(
+      JSON.parse((result[0] as TestRequestResult<typeof firstUser>).body).name,
+      firstUser.name
+    );
+    assert.strictEqual(
+      JSON.parse((result[1] as TestRequestResult<typeof secondUser>).body).name,
+      secondUser.name
+    );
+    assert.strictEqual(result[2], thirdUser.name);
     assert.ok(
       fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
     );
@@ -192,27 +284,42 @@ describe("Returning all requests", () => {
 
   test("Execute all with result handler", async () => {
     resetFetchMock();
-    const resultHandler: ResultHandler = (result: any): void => {
-      assert.strictEqual(JSON.parse(result[0].body).name, firstUser.name);
-      assert.strictEqual(JSON.parse(result[1].body).name, secondUser.name);
-      assert.strictEqual(result[2] as string, thirdUser.name);
+    const resultHandler: ResultHandler = (
+      result: IRequestResult | IRequestResult[]
+    ): void => {
+      const results = result as Array<
+        TestRequestResult<typeof firstUser> | string
+      >;
+      assert.strictEqual(
+        JSON.parse((results[0] as TestRequestResult<typeof firstUser>).body)
+          .name,
+        firstUser.name
+      );
+      assert.strictEqual(
+        JSON.parse((results[1] as TestRequestResult<typeof secondUser>).body)
+          .name,
+        secondUser.name
+      );
+      assert.strictEqual(results[2] as string, thirdUser.name);
     };
     fetchMock
       .once(JSON.stringify(firstUser))
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
-    const requestChain: RequestChain = RequestChain.begin<PipelineRequestStage>(
-      {
-        config: { url: "http://example.com/users", method: "GET" },
-      }
-    )
-      .next<PipelineRequestStage>({
-        config: { url: "http://example.com/users", method: "GET" },
-      })
-      .next<PipelineRequestStage>({
-        config: { url: "http://example.com/users", method: "GET" },
-        mapper: (result: any) => JSON.parse(result.body).name,
-      });
+    const requestChain: RequestChain<string, Response, FetchRequestConfig> =
+      RequestChain.begin<string, Response, FetchRequestConfig>(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+        },
+        new FetchRequestAdapter()
+      )
+        .next<TestRequestResult<typeof firstUser>>({
+          config: { url: "http://example.com/users", method: "GET" },
+        })
+        .next<string>({
+          config: { url: "http://example.com/users", method: "GET" },
+          mapper: (result: Response) => JSON.parse(result.body as any).name,
+        });
     requestChain.withResultHandler(resultHandler);
     await requestChain.executeAll();
     assert.ok(
@@ -227,18 +334,20 @@ describe("Returning all requests", () => {
       .once(JSON.stringify(firstUser))
       .mockReject(new Error("fake error message"))
       .once(JSON.stringify(thirdUser));
-    const requestChain: RequestChain = RequestChain.begin<PipelineRequestStage>(
-      {
-        config: { url: "http://example.com/users", method: "GET" },
-      }
-    )
-      .next<PipelineRequestStage>({
-        config: { url: "http://example.com/users", method: "GET" },
-      })
-      .next<PipelineRequestStage>({
-        config: { url: "http://example.com/users", method: "GET" },
-        mapper: (result: any) => JSON.parse(result.body).name,
-      });
+    const requestChain: RequestChain<string, Response, FetchRequestConfig> =
+      RequestChain.begin<string, Response, FetchRequestConfig>(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+        },
+        new FetchRequestAdapter()
+      )
+        .next<TestRequestResult<typeof firstUser>>({
+          config: { url: "http://example.com/users", method: "GET" },
+        })
+        .next<string>({
+          config: { url: "http://example.com/users", method: "GET" },
+          mapper: (result: Response) => JSON.parse(result.body as any).name,
+        });
     requestChain
       .withResultHandler(resultHandler)
       .withErrorHandler((error: Error): void => {
@@ -258,13 +367,27 @@ describe("Nested request manager test", () => {
     const response: string = JSON.stringify(firstUser);
     const secondResponse: string = JSON.stringify(secondUser);
     fetchMock.mockResponseOnce(response).mockResponseOnce(secondResponse);
-    const requestChain = RequestChain.begin<any>({
-      config: { url: "http://example.com/users", method: "GET" },
-    });
-    const result: any = await RequestChain.begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
-      .next<PipelineRequestStage>({ request: requestChain })
+    const requestChain = RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    );
+    const result = await RequestChain.begin<
+      TestRequestResult<typeof secondUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
+      .next<TestRequestResult<typeof secondUser>>({ request: requestChain })
       .execute();
     assert.strictEqual(result.body, secondResponse);
     assert.ok(
@@ -276,21 +399,25 @@ describe("Nested request manager test", () => {
 describe("Custom adapter test", () => {
   test("Basic GET request with custom adapter", async () => {
     resetFetchMock();
-    const adapter: RequestAdapter = new TestAdapter();
     const response: string = JSON.stringify(firstUser);
     fetchMock.mockResponseOnce(response);
-    const result: any = await RequestChain.begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
-      .setRequestAdapter(adapter)
-      .execute();
+    const result = await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new TestAdapter()
+    ).execute();
     assert.strictEqual(result.body, response);
     assert.strictEqual(result.customParam, "testParam");
     assert.ok(
       fetchMockToBeCalledWith("http://example.com/users", {
         method: "GET",
         testParam: "test",
-      } as any)
+      } as RequestInit)
     );
   });
 });
@@ -300,9 +427,16 @@ describe("Exported begin function test", () => {
     resetFetchMock();
     const response: string = JSON.stringify(firstUser);
     fetchMock.mockResponseOnce(response);
-    const result: any = await begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    }).execute();
+    const result = (await begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    ).execute()) as TestRequestResult<typeof firstUser>;
     assert.strictEqual(result.body, response);
     assert.ok(
       fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
@@ -315,16 +449,23 @@ describe("Exported begin function test", () => {
       .once(JSON.stringify(firstUser))
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
-    const result: any = await begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
-      .next<PipelineRequestStage>({
+    const result = (await begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
+      .next<TestRequestResult<typeof firstUser>>({
         config: { url: "http://example.com/users", method: "GET" },
       })
-      .next<PipelineRequestStage>({
+      .next<TestRequestResult<typeof secondUser>>({
         config: { url: "http://example.com/users", method: "GET" },
       })
-      .execute();
+      .execute()) as TestRequestResult<typeof thirdUser>;
     assert.strictEqual(result.body, JSON.stringify(thirdUser));
     assert.ok(
       fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
@@ -337,15 +478,22 @@ describe("Exported begin function test", () => {
       .once(JSON.stringify(firstUser))
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
-    const result = await begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
-      .next<PipelineRequestStage>({
+    const result = await begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
+      .next<TestRequestResult<typeof firstUser>>({
         config: { url: "http://example.com/users", method: "GET" },
       })
-      .next<PipelineRequestStage>({
+      .next<TestRequestResult<typeof secondUser>>({
         config: { url: "http://example.com/users", method: "GET" },
-        mapper: (result: any) => JSON.parse(result.body).name,
+        mapper: (result: Response) => JSON.parse(result.body as any).name,
       })
       .execute();
     assert.strictEqual(result, thirdUser.name);
@@ -358,11 +506,21 @@ describe("Exported begin function test", () => {
     resetFetchMock();
     const response: string = JSON.stringify(firstUser);
     fetchMock.mockResponseOnce(response);
-    await begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
+    await begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
       .withResultHandler((result: IRequestResult): void => {
-        assert.strictEqual((result as any).body, response);
+        assert.strictEqual(
+          (result as TestRequestResult<typeof firstUser>).body,
+          response
+        );
         assert.ok(
           fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
         );
@@ -373,9 +531,16 @@ describe("Exported begin function test", () => {
   test("Error handler test", async () => {
     resetFetchMock();
     fetchMock.mockReject(new Error("fake error message"));
-    await begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
+    await begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
       .withErrorHandler((error: Error): void => {
         assert.strictEqual(error.message, "fake error message");
       })
@@ -389,9 +554,16 @@ describe("Exported begin function test", () => {
     resetFetchMock();
     fetchMock.mockReject(new Error("fake error message"));
     const finishHandler = createMockFn();
-    await begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
+    await begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
       .withErrorHandler((error: Error): void => {
         assert.strictEqual(error.message, "fake error message");
       })
@@ -409,9 +581,16 @@ describe("Exported begin function test", () => {
     const resultHandler = createMockFn();
     const errorHandler = createMockFn();
     const finishHandler = createMockFn();
-    await begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
+    await begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
       .withResultHandler(resultHandler)
       .withErrorHandler(errorHandler)
       .withFinishHandler(finishHandler)
@@ -430,19 +609,32 @@ describe("Exported begin function test", () => {
       .once(JSON.stringify(firstUser))
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
-    const result: any[] = await begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
-      .next<PipelineRequestStage>({
+    const result = (await begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
+      .next<TestRequestResult<typeof firstUser>>({
         config: { url: "http://example.com/users", method: "GET" },
       })
-      .next<PipelineRequestStage>({
+      .next<string>({
         config: { url: "http://example.com/users", method: "GET" },
-        mapper: (result: any) => JSON.parse(result.body).name,
+        mapper: (result: Response) => JSON.parse(result.body as any).name,
       })
-      .executeAll();
-    assert.strictEqual(JSON.parse(result[0].body).name, firstUser.name);
-    assert.strictEqual(JSON.parse(result[1].body).name, secondUser.name);
+      .executeAll()) as Array<TestRequestResult<typeof firstUser> | string>;
+    assert.strictEqual(
+      JSON.parse((result[0] as TestRequestResult<typeof firstUser>).body).name,
+      firstUser.name
+    );
+    assert.strictEqual(
+      JSON.parse((result[1] as TestRequestResult<typeof secondUser>).body).name,
+      secondUser.name
+    );
     assert.strictEqual(result[2] as string, thirdUser.name);
     assert.ok(
       fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
@@ -451,25 +643,42 @@ describe("Exported begin function test", () => {
 
   test("Execute all with result handler", async () => {
     resetFetchMock();
-    const resultHandler: ResultHandler = (result: any): void => {
-      assert.strictEqual(JSON.parse(result[0].body).name, firstUser.name);
-      assert.strictEqual(JSON.parse(result[1].body).name, secondUser.name);
-      assert.strictEqual(result[2] as string, thirdUser.name);
+    const resultHandler: ResultHandler = (
+      result: IRequestResult | IRequestResult[]
+    ): void => {
+      const results = result as Array<
+        TestRequestResult<typeof firstUser> | string
+      >;
+      assert.strictEqual(
+        JSON.parse((results[0] as TestRequestResult<typeof firstUser>).body)
+          .name,
+        firstUser.name
+      );
+      assert.strictEqual(
+        JSON.parse((results[1] as TestRequestResult<typeof secondUser>).body)
+          .name,
+        secondUser.name
+      );
+      assert.strictEqual(results[2] as string, thirdUser.name);
     };
     fetchMock
       .once(JSON.stringify(firstUser))
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
-    const requestChain: RequestChain = begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
-      .next<PipelineRequestStage>({
-        config: { url: "http://example.com/users", method: "GET" },
-      })
-      .next<PipelineRequestStage>({
-        config: { url: "http://example.com/users", method: "GET" },
-        mapper: (result: any) => JSON.parse(result.body).name,
-      });
+    const requestChain: RequestChain<string, Response, FetchRequestConfig> =
+      begin<string, Response, FetchRequestConfig>(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+        },
+        new FetchRequestAdapter()
+      )
+        .next<TestRequestResult<typeof firstUser>>({
+          config: { url: "http://example.com/users", method: "GET" },
+        })
+        .next<string>({
+          config: { url: "http://example.com/users", method: "GET" },
+          mapper: (result: Response) => JSON.parse(result.body as any).name,
+        });
     requestChain.withResultHandler(resultHandler);
     await requestChain.executeAll();
     assert.ok(
@@ -484,16 +693,20 @@ describe("Exported begin function test", () => {
       .once(JSON.stringify(firstUser))
       .mockReject(new Error("fake error message"))
       .once(JSON.stringify(thirdUser));
-    const requestChain: RequestChain = begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
-      .next<PipelineRequestStage>({
-        config: { url: "http://example.com/users", method: "GET" },
-      })
-      .next<PipelineRequestStage>({
-        config: { url: "http://example.com/users", method: "GET" },
-        mapper: (result: any) => JSON.parse(result.body).name,
-      });
+    const requestChain: RequestChain<string, Response, FetchRequestConfig> =
+      begin<string, Response, FetchRequestConfig>(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+        },
+        new FetchRequestAdapter()
+      )
+        .next<TestRequestResult<typeof firstUser>>({
+          config: { url: "http://example.com/users", method: "GET" },
+        })
+        .next<string>({
+          config: { url: "http://example.com/users", method: "GET" },
+          mapper: (result: Response) => JSON.parse(result.body as any).name,
+        });
     requestChain
       .withResultHandler(resultHandler)
       .withErrorHandler((error: Error): void => {
@@ -511,14 +724,28 @@ describe("Exported begin function test", () => {
     const response: string = JSON.stringify(firstUser);
     const secondResponse: string = JSON.stringify(secondUser);
     fetchMock.mockResponseOnce(response).mockResponseOnce(secondResponse);
-    const requestChain = begin<any>({
-      config: { url: "http://example.com/users", method: "GET" },
-    });
-    const result: any = await begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
-      .next<PipelineRequestStage>({ request: requestChain })
-      .execute();
+    const requestChain = begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    );
+    const result = (await begin<
+      TestRequestResult<typeof secondUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
+      .next<TestRequestResult<typeof secondUser>>({ request: requestChain })
+      .execute()) as TestRequestResult<typeof secondUser>;
     assert.strictEqual(result.body, secondResponse);
     assert.ok(
       fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
@@ -527,21 +754,29 @@ describe("Exported begin function test", () => {
 
   test("Basic GET request with custom adapter", async () => {
     resetFetchMock();
-    const adapter: RequestAdapter = new TestAdapter();
+    const adapter: RequestAdapter<Response, FetchRequestConfig> =
+      new TestAdapter();
     const response: string = JSON.stringify(firstUser);
     fetchMock.mockResponseOnce(response);
-    const result: any = await begin<PipelineRequestStage>({
-      config: { url: "http://example.com/users", method: "GET" },
-    })
+    const result = (await begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new TestAdapter()
+    )
       .setRequestAdapter(adapter)
-      .execute();
+      .execute()) as TestRequestResult<typeof firstUser>;
     assert.strictEqual(result.body, response);
     assert.strictEqual(result.customParam, "testParam");
     assert.ok(
       fetchMockToBeCalledWith("http://example.com/users", {
         method: "GET",
         testParam: "test",
-      } as any)
+      } as RequestInit)
     );
   });
 });

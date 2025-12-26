@@ -1,13 +1,20 @@
-import { IRequestConfig } from "./models/RequestParams";
+import type { IRequestConfig } from "./models/RequestParams";
 
-export default abstract class RequestAdapter {
-  public abstract createRequest(requestConfig: IRequestConfig): Promise<any>;
+export default abstract class RequestAdapter<
+  ExecutionResult,
+  RequestConfig extends IRequestConfig = IRequestConfig
+> {
+  public abstract createRequest(
+    requestConfig: RequestConfig
+  ): Promise<ExecutionResult>;
 
-  public getResult(result: any): any {
-    return result;
+  public getResult<T>(result: ExecutionResult | unknown): T {
+    return result as unknown as T;
   }
 
-  public executeRequest(requestConfig: IRequestConfig): Promise<any> {
+  public executeRequest(
+    requestConfig: RequestConfig
+  ): Promise<ExecutionResult> {
     return this.createRequest(requestConfig);
   }
 }

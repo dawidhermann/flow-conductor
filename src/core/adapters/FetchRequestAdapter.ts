@@ -1,15 +1,18 @@
 import RequestAdapter from "../../core/RequestAdapter";
 import { IRequestConfig } from "core/models/RequestParams";
 
-export default class FetchRequestAdapter extends RequestAdapter {
+export type FetchRequestConfig = IRequestConfig;
 
-    public createRequest (requestConfig: IRequestConfig): Promise<any> {
-        const { data, url, ...rest } = requestConfig;
-        const fetchConfig: any = { ...rest };
-        if (data) {
-            fetchConfig.data = JSON.stringify(data);
-        }
-        return fetch(url, fetchConfig);
+export default class FetchRequestAdapter extends RequestAdapter<
+  Response,
+  FetchRequestConfig
+> {
+  public createRequest(requestConfig: IRequestConfig): Promise<Response> {
+    const { data, url, ...rest } = requestConfig;
+    const fetchConfig: any = { ...rest };
+    if (data) {
+      fetchConfig.data = JSON.stringify(data);
     }
-
+    return fetch(url, fetchConfig);
+  }
 }

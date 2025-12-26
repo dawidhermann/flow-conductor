@@ -1,37 +1,71 @@
+import RequestAdapter from "./RequestAdapter";
 import RequestFlow from "./RequestManager";
 import {
-  IRequestResult,
   IRequestConfig,
   PipelineRequestStage,
   PipelineManagerStage,
 } from "./models/RequestParams";
 
-export default class RequestChain extends RequestFlow {
+export default class RequestChain<
+  Out,
+  AdapterExecutionResult = Out,
+  AdapterRequestConfig extends IRequestConfig = IRequestConfig
+> extends RequestFlow<Out, AdapterExecutionResult, AdapterRequestConfig> {
   //  #region Public methods
 
-  public static begin = <T extends PipelineRequestStage<IRequestResult>>(
-    requestEntity: T
-  ): RequestChain => {
-    const requestChain: RequestChain = new RequestChain();
-    return requestChain.next(requestEntity);
+  public static begin = <
+    Out,
+    AdapterExecutionResult,
+    AdapterRequestConfig extends IRequestConfig = IRequestConfig
+  >(
+    stage: PipelineRequestStage<Out>,
+    adapter: RequestAdapter<AdapterExecutionResult, AdapterRequestConfig>
+  ): RequestChain<Out, AdapterExecutionResult, AdapterRequestConfig> => {
+    const requestChain: RequestChain<
+      Out,
+      AdapterExecutionResult,
+      AdapterRequestConfig
+    > = new RequestChain<Out, AdapterExecutionResult, AdapterRequestConfig>();
+    requestChain.setRequestAdapter(adapter);
+    return requestChain.next(
+      stage as unknown as
+        | PipelineRequestStage<
+            AdapterExecutionResult,
+            Out,
+            AdapterRequestConfig
+          >
+        | PipelineManagerStage<
+            Out,
+            AdapterExecutionResult,
+            AdapterRequestConfig
+          >
+    );
   };
 
-  public next = <T extends PipelineRequestStage<IRequestResult>>(
-    requestEntity: T
-  ): RequestChain => {
-    return this.addRequestEntity(requestEntity);
+  public next = <NewOut>(
+    stage:
+      | PipelineRequestStage<
+          AdapterExecutionResult,
+          NewOut,
+          AdapterRequestConfig
+        >
+      | PipelineManagerStage<
+          NewOut,
+          AdapterExecutionResult,
+          AdapterRequestConfig
+        >
+  ): RequestChain<NewOut, AdapterExecutionResult, AdapterRequestConfig> => {
+    return this.addRequestEntity(stage);
   };
 
-  public async execute(): Promise<IRequestResult> {
+  public execute = async (): Promise<Out> => {
     try {
-      const results: IRequestResult[] = await this.executeAllRequests(
-        this.requestList
-      );
-      const result: IRequestResult = await results[results.length - 1];
+      const results: Out[] = await this.executeAllRequests(this.requestList);
+      const result: Out = results[results.length - 1];
       if (this.resultHandler && result) {
         this.resultHandler(result);
       }
-      return result;
+      return result as Out;
     } catch (error) {
       if (this.errorHandler) {
         this.errorHandler(error);
@@ -44,22 +78,23 @@ export default class RequestChain extends RequestFlow {
         this.finishHandler();
       }
     }
-  }
+  };
 
-  public async executeAll(): Promise<IRequestResult[]> {
+  public async executeAll<Middle extends unknown[]>(): Promise<
+    [...Middle, Out]
+  > {
     try {
-      const results: IRequestResult[] = await this.executeAllRequests(
+      const results: Array<Out | Middle> = await this.executeAllRequests(
         this.requestList
       );
-      let resultList: IRequestResult[] = [];
+      const resultList: [...Middle, Out][] = [];
       for (const pendingResult of results) {
-        const res = await pendingResult;
-        resultList.push(res);
+        resultList.push(pendingResult as [...Middle, Out]);
       }
       if (this.resultHandler && results) {
         this.resultHandler(resultList);
       }
-      return resultList;
+      return resultList as [...Middle, Out];
     } catch (error) {
       if (this.errorHandler) {
         this.errorHandler(error);
@@ -78,56 +113,81 @@ export default class RequestChain extends RequestFlow {
 
   //  #region Private methods
 
-  private addRequestEntity = <T extends PipelineRequestStage<IRequestResult>>(
-    requestEntity: T
-  ): RequestChain => {
-    this.requestList.push(requestEntity);
-    return this;
+  private addRequestEntity = <NewOut>(
+    stage:
+      | PipelineRequestStage<
+          AdapterExecutionResult,
+          NewOut,
+          AdapterRequestConfig
+        >
+      | PipelineManagerStage<
+          NewOut,
+          AdapterExecutionResult,
+          AdapterRequestConfig
+        >
+  ): RequestChain<NewOut, AdapterExecutionResult, AdapterRequestConfig> => {
+    this.requestList.push(stage);
+    return this as unknown as RequestChain<
+      NewOut,
+      AdapterExecutionResult,
+      AdapterRequestConfig
+    >;
   };
 
-  private executeAllRequests = async (
+  private executeAllRequests = async <Out>(
     requestEntityList: (
-      | PipelineRequestStage<IRequestResult>
-      | PipelineManagerStage<IRequestResult>
+      | PipelineRequestStage<AdapterExecutionResult, Out, AdapterRequestConfig>
+      | PipelineManagerStage<Out, AdapterExecutionResult, AdapterRequestConfig>
     )[]
-  ): Promise<IRequestResult[]> => {
-    const results: IRequestResult[] = [];
+  ): Promise<Out[]> => {
+    const results: Out[] = [];
     for (let i = 0; i < requestEntityList.length; i++) {
       const requestEntity:
-        | PipelineRequestStage<IRequestResult>
-        | PipelineManagerStage<IRequestResult> = requestEntityList[i];
+        | PipelineRequestStage<
+            AdapterExecutionResult,
+            Out,
+            AdapterRequestConfig
+          >
+        | PipelineManagerStage<
+            Out,
+            AdapterExecutionResult,
+            AdapterRequestConfig
+          > = requestEntityList[i];
       const previousEntity = requestEntityList[i - 1];
-      const previousResult: IRequestResult | undefined = previousEntity?.result;
-      const requestResult: IRequestResult = await this.executeSingle(
+      const previousResult: Out | undefined = previousEntity?.result;
+      const requestResult: Out = await this.executeSingle<Out>(
         requestEntity,
         previousResult
       );
-      const result = requestEntity.mapper
-        ? requestEntity.mapper(requestResult)
+      const result: Out = requestEntity.mapper
+        ? await requestEntity.mapper(requestResult as any)
         : requestResult;
-      requestEntityList[i].result = result;
+      requestEntityList[i].result = result as Out;
       results.push(result);
     }
     return results;
   };
 
-  private executeSingle = async (
+  private executeSingle = async <Out>(
     requestEntity:
-      | PipelineRequestStage<IRequestResult>
-      | PipelineManagerStage<IRequestResult>,
-    previousResult?: any
-  ): Promise<IRequestResult> => {
+      | PipelineRequestStage<AdapterExecutionResult, Out, AdapterRequestConfig>
+      | PipelineManagerStage<Out, AdapterExecutionResult, AdapterRequestConfig>,
+    previousResult?: Out
+  ): Promise<Out> => {
     if (isPipelineRequestStage(requestEntity)) {
       const { config } = requestEntity;
-      const requestConfig: IRequestConfig =
-        typeof config === "function" ? config(previousResult) : config;
-      const rawResult: IRequestResult = await this.adapter.executeRequest(
-        requestConfig
-      );
+      const requestConfig: IRequestConfig = // TODO fix type
+        typeof config === "function"
+          ? config(previousResult as AdapterExecutionResult)
+          : config;
+      const rawResult: AdapterExecutionResult =
+        await this.adapter.executeRequest(
+          requestConfig as AdapterRequestConfig
+        );
       return this.adapter.getResult(rawResult);
     } else if (isPipelineManagerStage(requestEntity)) {
       const { request } = requestEntity;
-      const rawResult: IRequestResult = await request.execute();
+      const rawResult: Out = await request.execute();
       return this.adapter.getResult(rawResult);
     } else {
       throw new Error("Unknown type");
@@ -137,25 +197,53 @@ export default class RequestChain extends RequestFlow {
   //  #endregion
 }
 
-export function begin<T extends PipelineRequestStage<IRequestResult>>(
-  requestEntity: T
-): RequestChain {
-  const requestChain: RequestChain = new RequestChain();
-  return requestChain.next(requestEntity);
+export function begin<
+  Out,
+  AdapterExecutionResult,
+  AdapterRequestConfig extends IRequestConfig = IRequestConfig
+>(
+  stage:
+    | PipelineRequestStage<Out, AdapterRequestConfig>
+    | PipelineManagerStage<Out, AdapterExecutionResult, AdapterRequestConfig>,
+  adapter: RequestAdapter<AdapterExecutionResult, AdapterRequestConfig>
+): RequestChain<Out, AdapterExecutionResult, AdapterRequestConfig> {
+  const requestChain: RequestChain<
+    Out,
+    AdapterExecutionResult,
+    AdapterRequestConfig
+  > = new RequestChain<Out, AdapterExecutionResult, AdapterRequestConfig>();
+  requestChain.setRequestAdapter(adapter);
+  return requestChain.next(stage as any);
 }
 
-function isPipelineRequestStage(
-  requestEntity:
-    | PipelineRequestStage<IRequestResult>
-    | PipelineManagerStage<IRequestResult>
-): requestEntity is PipelineRequestStage<IRequestResult> {
-  return "config" in requestEntity;
+function isPipelineRequestStage<
+  Out,
+  AdapterExecutionResult,
+  AdapterRequestConfig extends IRequestConfig = IRequestConfig
+>(
+  stage:
+    | PipelineRequestStage<AdapterExecutionResult, Out, AdapterRequestConfig>
+    | PipelineManagerStage<Out, AdapterExecutionResult, AdapterRequestConfig>
+): stage is PipelineRequestStage<
+  AdapterExecutionResult,
+  Out,
+  AdapterRequestConfig
+> {
+  return "config" in stage;
 }
 
-function isPipelineManagerStage(
-  requestEntity:
-    | PipelineRequestStage<IRequestResult>
-    | PipelineManagerStage<IRequestResult>
-): requestEntity is PipelineManagerStage<IRequestResult> {
-  return "request" in requestEntity;
+function isPipelineManagerStage<
+  Out,
+  AdapterExecutionResult,
+  AdapterRequestConfig extends IRequestConfig = IRequestConfig
+>(
+  stage:
+    | PipelineRequestStage<Out, AdapterRequestConfig>
+    | PipelineManagerStage<Out, AdapterExecutionResult, AdapterRequestConfig>
+): stage is PipelineManagerStage<
+  Out,
+  AdapterExecutionResult,
+  AdapterRequestConfig
+> {
+  return "request" in stage;
 }

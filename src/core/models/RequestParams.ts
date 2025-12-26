@@ -1,4 +1,4 @@
-import RequestFlow from "../RequestManager";
+import type RequestFlow from "../RequestManager";
 
 type HttpMethods =
   | "GET"
@@ -18,24 +18,28 @@ export interface IRequestConfig {
   [key: string]: any;
 }
 
-export interface IRequestConfigFactory<Result> {
-  (previousResult: Result): IRequestConfig;
-}
+export type IRequestConfigFactory<Result> = (
+  previousResult?: Result
+) => IRequestConfig;
 
-export interface BasePipelineStage<Result> {
+export interface BasePipelineStage<Result, Out = Result> {
   precondition?: () => boolean;
-  result?: Result;
-  mapper?: (result: IRequestResult) => Result;
+  result?: Out;
+  mapper?: (result: Result) => Promise<Out>;
 }
 
-export interface PipelineRequestStage<Result>
-  extends BasePipelineStage<Result> {
-  config: IRequestConfig | IRequestConfigFactory<Result>;
+export interface PipelineRequestStage<
+  Result,
+  Out = Result,
+  AdapterRequestConfig extends IRequestConfig = IRequestConfig
+> extends BasePipelineStage<Result, Out> {
+  config: AdapterRequestConfig | IRequestConfigFactory<Result>;
 }
 
-export interface PipelineManagerStage<Result>
-  extends BasePipelineStage<Result> {
-  request: RequestFlow;
+export interface PipelineManagerStage<
+  Out,
+  AdapterExecutionResult,
+  AdapterRequestConfig extends IRequestConfig = IRequestConfig
+> extends BasePipelineStage<Out> {
+  request: RequestFlow<Out, AdapterExecutionResult, AdapterRequestConfig>;
 }
-
-export type IRequestResult = {};
