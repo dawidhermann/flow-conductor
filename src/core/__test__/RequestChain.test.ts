@@ -734,7 +734,7 @@ describe("Exported begin function test", () => {
       },
       new FetchRequestAdapter()
     );
-    const result = (await begin<
+    const result = await begin<
       TestRequestResult<typeof secondUser>,
       Response,
       FetchRequestConfig
@@ -745,7 +745,7 @@ describe("Exported begin function test", () => {
       new FetchRequestAdapter()
     )
       .next<TestRequestResult<typeof secondUser>>({ request: requestChain })
-      .execute()) as TestRequestResult<typeof secondUser>;
+      .execute();
     assert.strictEqual(result.body, secondResponse);
     assert.ok(
       fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
@@ -758,7 +758,7 @@ describe("Exported begin function test", () => {
       new TestAdapter();
     const response: string = JSON.stringify(firstUser);
     fetchMock.mockResponseOnce(response);
-    const result = (await begin<
+    const result = await begin<
       TestRequestResult<typeof firstUser>,
       Response,
       FetchRequestConfig
@@ -769,7 +769,7 @@ describe("Exported begin function test", () => {
       new TestAdapter()
     )
       .setRequestAdapter(adapter)
-      .execute()) as TestRequestResult<typeof firstUser>;
+      .execute()
     assert.strictEqual(result.body, response);
     assert.strictEqual(result.customParam, "testParam");
     assert.ok(
