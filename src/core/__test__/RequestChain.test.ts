@@ -245,7 +245,7 @@ describe("Returning all requests", () => {
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
     const result = await RequestChain.begin<
-      string,
+      TestRequestResult<typeof firstUser>,
       Response,
       FetchRequestConfig
     >(
@@ -254,28 +254,16 @@ describe("Returning all requests", () => {
       },
       new FetchRequestAdapter()
     )
-      .next<TestRequestResult<typeof firstUser>>({
+      .next<TestRequestResult<typeof secondUser>>({
         config: { url: "http://example.com/users", method: "GET" },
       })
       .next<string>({
         config: { url: "http://example.com/users", method: "GET" },
         mapper: (result: Response) => JSON.parse(result.body as any).name,
       })
-      .executeAll<
-        [
-          TestRequestResult<typeof firstUser>,
-          TestRequestResult<typeof secondUser>,
-          string
-        ]
-      >();
-    assert.strictEqual(
-      JSON.parse((result[0] as TestRequestResult<typeof firstUser>).body).name,
-      firstUser.name
-    );
-    assert.strictEqual(
-      JSON.parse((result[1] as TestRequestResult<typeof secondUser>).body).name,
-      secondUser.name
-    );
+      .executeAll();
+    assert.strictEqual(JSON.parse(result[0].body).name, firstUser.name);
+    assert.strictEqual(JSON.parse(result[1].body).name, secondUser.name);
     assert.strictEqual(result[2], thirdUser.name);
     assert.ok(
       fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
@@ -306,20 +294,23 @@ describe("Returning all requests", () => {
       .once(JSON.stringify(firstUser))
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
-    const requestChain: RequestChain<string, Response, FetchRequestConfig> =
-      RequestChain.begin<string, Response, FetchRequestConfig>(
-        {
-          config: { url: "http://example.com/users", method: "GET" },
-        },
-        new FetchRequestAdapter()
-      )
-        .next<TestRequestResult<typeof firstUser>>({
-          config: { url: "http://example.com/users", method: "GET" },
-        })
-        .next<string>({
-          config: { url: "http://example.com/users", method: "GET" },
-          mapper: (result: Response) => JSON.parse(result.body as any).name,
-        });
+    const requestChain = RequestChain.begin<
+      string,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
+      .next<TestRequestResult<typeof firstUser>>({
+        config: { url: "http://example.com/users", method: "GET" },
+      })
+      .next<string>({
+        config: { url: "http://example.com/users", method: "GET" },
+        mapper: (result: Response) => JSON.parse(result.body as any).name,
+      });
     requestChain.withResultHandler(resultHandler);
     await requestChain.executeAll();
     assert.ok(
@@ -334,20 +325,23 @@ describe("Returning all requests", () => {
       .once(JSON.stringify(firstUser))
       .mockReject(new Error("fake error message"))
       .once(JSON.stringify(thirdUser));
-    const requestChain: RequestChain<string, Response, FetchRequestConfig> =
-      RequestChain.begin<string, Response, FetchRequestConfig>(
-        {
-          config: { url: "http://example.com/users", method: "GET" },
-        },
-        new FetchRequestAdapter()
-      )
-        .next<TestRequestResult<typeof firstUser>>({
-          config: { url: "http://example.com/users", method: "GET" },
-        })
-        .next<string>({
-          config: { url: "http://example.com/users", method: "GET" },
-          mapper: (result: Response) => JSON.parse(result.body as any).name,
-        });
+    const requestChain = RequestChain.begin<
+      string,
+      Response,
+      FetchRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
+      .next<TestRequestResult<typeof firstUser>>({
+        config: { url: "http://example.com/users", method: "GET" },
+      })
+      .next<string>({
+        config: { url: "http://example.com/users", method: "GET" },
+        mapper: (result: Response) => JSON.parse(result.body as any).name,
+      });
     requestChain
       .withResultHandler(resultHandler)
       .withErrorHandler((error: Error): void => {
@@ -665,20 +659,19 @@ describe("Exported begin function test", () => {
       .once(JSON.stringify(firstUser))
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
-    const requestChain: RequestChain<string, Response, FetchRequestConfig> =
-      begin<string, Response, FetchRequestConfig>(
-        {
-          config: { url: "http://example.com/users", method: "GET" },
-        },
-        new FetchRequestAdapter()
-      )
-        .next<TestRequestResult<typeof firstUser>>({
-          config: { url: "http://example.com/users", method: "GET" },
-        })
-        .next<string>({
-          config: { url: "http://example.com/users", method: "GET" },
-          mapper: (result: Response) => JSON.parse(result.body as any).name,
-        });
+    const requestChain = begin<string, Response, FetchRequestConfig>(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
+      .next<TestRequestResult<typeof firstUser>>({
+        config: { url: "http://example.com/users", method: "GET" },
+      })
+      .next<string>({
+        config: { url: "http://example.com/users", method: "GET" },
+        mapper: (result: Response) => JSON.parse(result.body as any).name,
+      });
     requestChain.withResultHandler(resultHandler);
     await requestChain.executeAll();
     assert.ok(
@@ -693,20 +686,19 @@ describe("Exported begin function test", () => {
       .once(JSON.stringify(firstUser))
       .mockReject(new Error("fake error message"))
       .once(JSON.stringify(thirdUser));
-    const requestChain: RequestChain<string, Response, FetchRequestConfig> =
-      begin<string, Response, FetchRequestConfig>(
-        {
-          config: { url: "http://example.com/users", method: "GET" },
-        },
-        new FetchRequestAdapter()
-      )
-        .next<TestRequestResult<typeof firstUser>>({
-          config: { url: "http://example.com/users", method: "GET" },
-        })
-        .next<string>({
-          config: { url: "http://example.com/users", method: "GET" },
-          mapper: (result: Response) => JSON.parse(result.body as any).name,
-        });
+    const requestChain = begin<string, Response, FetchRequestConfig>(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+      },
+      new FetchRequestAdapter()
+    )
+      .next<TestRequestResult<typeof firstUser>>({
+        config: { url: "http://example.com/users", method: "GET" },
+      })
+      .next<string>({
+        config: { url: "http://example.com/users", method: "GET" },
+        mapper: (result: Response) => JSON.parse(result.body as any).name,
+      });
     requestChain
       .withResultHandler(resultHandler)
       .withErrorHandler((error: Error): void => {
@@ -769,7 +761,7 @@ describe("Exported begin function test", () => {
       new TestAdapter()
     )
       .setRequestAdapter(adapter)
-      .execute()
+      .execute();
     assert.strictEqual(result.body, response);
     assert.strictEqual(result.customParam, "testParam");
     assert.ok(

@@ -9,7 +9,8 @@ import type {
 export default class RequestChain<
   Out,
   AdapterExecutionResult = Out,
-  AdapterRequestConfig extends IRequestConfig = IRequestConfig
+  AdapterRequestConfig extends IRequestConfig = IRequestConfig,
+  Types extends readonly unknown[] = [Out]
 > extends RequestFlow<Out, AdapterExecutionResult, AdapterRequestConfig> {
   //  #region Public methods
 
@@ -22,12 +23,13 @@ export default class RequestChain<
       | PipelineRequestStage<AdapterExecutionResult, Out, AdapterRequestConfig>
       | PipelineManagerStage<Out, AdapterExecutionResult, AdapterRequestConfig>,
     adapter: RequestAdapter<AdapterExecutionResult, AdapterRequestConfig>
-  ): RequestChain<Out, AdapterExecutionResult, AdapterRequestConfig> => {
-    const requestChain: RequestChain<
+  ): RequestChain<Out, AdapterExecutionResult, AdapterRequestConfig, [Out]> => {
+    const requestChain = new RequestChain<
       Out,
       AdapterExecutionResult,
-      AdapterRequestConfig
-    > = new RequestChain<Out, AdapterExecutionResult, AdapterRequestConfig>();
+      AdapterRequestConfig,
+      []
+    >();
     requestChain.setRequestAdapter(adapter);
     return requestChain.next(stage);
   };
@@ -44,7 +46,12 @@ export default class RequestChain<
           AdapterExecutionResult,
           AdapterRequestConfig
         >
-  ): RequestChain<NewOut, AdapterExecutionResult, AdapterRequestConfig> => {
+  ): RequestChain<
+    NewOut,
+    AdapterExecutionResult,
+    AdapterRequestConfig,
+    [...Types, NewOut]
+  > => {
     return this.addRequestEntity(stage);
   };
 
@@ -70,13 +77,13 @@ export default class RequestChain<
     }
   };
 
-  public async executeAll(): Promise<Out[]> {
+  public async executeAll(): Promise<Types> {
     try {
-      const results: Out[] = await this.executeAllRequests(this.requestList);
+      const results = await this.executeAllRequests(this.requestList);
       if (this.resultHandler && results.length > 0) {
         this.resultHandler(results);
       }
-      return results;
+      return results as unknown as Types;
     } catch (error) {
       if (this.errorHandler) {
         this.errorHandler(error);
@@ -107,12 +114,18 @@ export default class RequestChain<
           AdapterExecutionResult,
           AdapterRequestConfig
         >
-  ): RequestChain<NewOut, AdapterExecutionResult, AdapterRequestConfig> => {
+  ): RequestChain<
+    NewOut,
+    AdapterExecutionResult,
+    AdapterRequestConfig,
+    [...Types, NewOut]
+  > => {
     this.requestList.push(stage);
     return this as unknown as RequestChain<
       NewOut,
       AdapterExecutionResult,
-      AdapterRequestConfig
+      AdapterRequestConfig,
+      [...Types, NewOut]
     >;
   };
 
@@ -195,12 +208,13 @@ export function begin<
     | PipelineRequestStage<AdapterExecutionResult, Out, AdapterRequestConfig>
     | PipelineManagerStage<Out, AdapterExecutionResult, AdapterRequestConfig>,
   adapter: RequestAdapter<AdapterExecutionResult, AdapterRequestConfig>
-): RequestChain<Out, AdapterExecutionResult, AdapterRequestConfig> {
-  const requestChain: RequestChain<
+): RequestChain<Out, AdapterExecutionResult, AdapterRequestConfig, [Out]> {
+  const requestChain = new RequestChain<
     Out,
     AdapterExecutionResult,
-    AdapterRequestConfig
-  > = new RequestChain<Out, AdapterExecutionResult, AdapterRequestConfig>();
+    AdapterRequestConfig,
+    []
+  >();
   requestChain.setRequestAdapter(adapter);
   return requestChain.next(stage);
 }
