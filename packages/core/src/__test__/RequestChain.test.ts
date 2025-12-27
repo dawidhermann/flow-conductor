@@ -286,11 +286,7 @@ describe("Returning all requests", () => {
       .once(JSON.stringify(firstUser))
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
-    const requestChain = RequestChain.begin<
-      string,
-      Response,
-      IRequestConfig
-    >(
+    const requestChain = RequestChain.begin<string, Response, IRequestConfig>(
       {
         config: { url: "http://example.com/users", method: "GET" },
       },
@@ -317,11 +313,7 @@ describe("Returning all requests", () => {
       .once(JSON.stringify(firstUser))
       .mockReject(new Error("fake error message"))
       .once(JSON.stringify(thirdUser));
-    const requestChain = RequestChain.begin<
-      string,
-      Response,
-      IRequestConfig
-    >(
+    const requestChain = RequestChain.begin<string, Response, IRequestConfig>(
       {
         config: { url: "http://example.com/users", method: "GET" },
       },
@@ -494,11 +486,7 @@ describe("Exported begin function test", () => {
     resetFetchMock();
     const response: string = JSON.stringify(firstUser);
     fetchMock.mockResponseOnce(response);
-    await begin<
-      TestRequestResult<typeof firstUser>,
-      Response,
-      IRequestConfig
-    >(
+    await begin<TestRequestResult<typeof firstUser>, Response, IRequestConfig>(
       {
         config: { url: "http://example.com/users", method: "GET" },
       },
@@ -519,11 +507,7 @@ describe("Exported begin function test", () => {
   test("Error handler test", async () => {
     resetFetchMock();
     fetchMock.mockReject(new Error("fake error message"));
-    await begin<
-      TestRequestResult<typeof firstUser>,
-      Response,
-      IRequestConfig
-    >(
+    await begin<TestRequestResult<typeof firstUser>, Response, IRequestConfig>(
       {
         config: { url: "http://example.com/users", method: "GET" },
       },
@@ -542,11 +526,7 @@ describe("Exported begin function test", () => {
     resetFetchMock();
     fetchMock.mockReject(new Error("fake error message"));
     const finishHandler = createMockFn();
-    await begin<
-      TestRequestResult<typeof firstUser>,
-      Response,
-      IRequestConfig
-    >(
+    await begin<TestRequestResult<typeof firstUser>, Response, IRequestConfig>(
       {
         config: { url: "http://example.com/users", method: "GET" },
       },
@@ -569,11 +549,7 @@ describe("Exported begin function test", () => {
     const resultHandler = createMockFn();
     const errorHandler = createMockFn();
     const finishHandler = createMockFn();
-    await begin<
-      TestRequestResult<typeof firstUser>,
-      Response,
-      IRequestConfig
-    >(
+    await begin<TestRequestResult<typeof firstUser>, Response, IRequestConfig>(
       {
         config: { url: "http://example.com/users", method: "GET" },
       },
@@ -740,8 +716,7 @@ describe("Exported begin function test", () => {
 
   test("Basic GET request with custom adapter", async () => {
     resetFetchMock();
-    const adapter: RequestAdapter<Response, IRequestConfig> =
-      new TestAdapter();
+    const adapter: RequestAdapter<Response, IRequestConfig> = new TestAdapter();
     const response: string = JSON.stringify(firstUser);
     fetchMock.mockResponseOnce(response);
     const result = await begin<
@@ -764,5 +739,247 @@ describe("Exported begin function test", () => {
         testParam: "test",
       } as RequestInit)
     );
+  });
+});
+
+describe("Precondition test", () => {
+  test("Stage with precondition returning true should execute", async () => {
+    resetFetchMock();
+    const response: string = JSON.stringify(firstUser);
+    fetchMock.mockResponseOnce(response);
+    let executed = false;
+    const result = await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+        precondition: () => {
+          executed = true;
+          return true;
+        },
+      },
+      new TestAdapter()
+    ).execute();
+    assert.ok(executed);
+    assert.strictEqual(result.body, response);
+    assert.ok(
+      fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
+    );
+  });
+
+  test("Stage with precondition returning false should be skipped", async () => {
+    resetFetchMock();
+    const response: string = JSON.stringify(firstUser);
+    fetchMock.mockResponseOnce(response);
+    let preconditionCalled = false;
+    const result = await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+        precondition: () => {
+          preconditionCalled = true;
+          return false;
+        },
+      },
+      new TestAdapter()
+    ).execute();
+    assert.ok(preconditionCalled);
+    // When first stage is skipped, result should be undefined
+    assert.strictEqual(result, undefined);
+    // Fetch should not be called when precondition is false
+    assert.ok(
+      !fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
+    );
+  });
+
+  test("Middle stage with precondition returning false should be skipped", async () => {
+    resetFetchMock();
+    fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(thirdUser));
+    let secondStageExecuted = false;
+    const result = await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+      },
+      new TestAdapter()
+    )
+      .next<TestRequestResult<typeof secondUser>>({
+        config: { url: "http://example.com/users/2", method: "GET" },
+        precondition: () => {
+          secondStageExecuted = true;
+          return false;
+        },
+      })
+      .next<TestRequestResult<typeof thirdUser>>({
+        config: { url: "http://example.com/users/3", method: "GET" },
+      })
+      .execute();
+    assert.ok(secondStageExecuted);
+    // Result should be from third stage (second was skipped)
+    assert.strictEqual(result.body, JSON.stringify(thirdUser));
+    // Only first and third requests should be made
+    assert.ok(
+      fetchMockToBeCalledWith("http://example.com/users/1", { method: "GET" })
+    );
+    assert.ok(
+      fetchMockToBeCalledWith("http://example.com/users/3", { method: "GET" })
+    );
+    // Second request should not be made
+    assert.ok(
+      !fetchMockToBeCalledWith("http://example.com/users/2", { method: "GET" })
+    );
+  });
+
+  test("Multiple stages with preconditions", async () => {
+    resetFetchMock();
+    fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(thirdUser));
+    const preconditionCalls: string[] = [];
+    const result = await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+        precondition: () => {
+          preconditionCalls.push("stage1");
+          return true;
+        },
+      },
+      new TestAdapter()
+    )
+      .next<TestRequestResult<typeof secondUser>>({
+        config: { url: "http://example.com/users/2", method: "GET" },
+        precondition: () => {
+          preconditionCalls.push("stage2");
+          return false; // Skip this stage
+        },
+      })
+      .next<TestRequestResult<typeof thirdUser>>({
+        config: { url: "http://example.com/users/3", method: "GET" },
+        precondition: () => {
+          preconditionCalls.push("stage3");
+          return true;
+        },
+      })
+      .execute();
+    assert.deepStrictEqual(preconditionCalls, ["stage1", "stage2", "stage3"]);
+    assert.strictEqual(result.body, JSON.stringify(thirdUser));
+    // Only stages 1 and 3 should execute
+    assert.ok(
+      fetchMockToBeCalledWith("http://example.com/users/1", { method: "GET" })
+    );
+    assert.ok(
+      fetchMockToBeCalledWith("http://example.com/users/3", { method: "GET" })
+    );
+    assert.ok(
+      !fetchMockToBeCalledWith("http://example.com/users/2", { method: "GET" })
+    );
+  });
+
+  test("Precondition with mapper - skipped stage should use previous result", async () => {
+    resetFetchMock();
+    fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(thirdUser));
+    const result = await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+      },
+      new TestAdapter()
+    )
+      .next<string>({
+        config: { url: "http://example.com/users/2", method: "GET" },
+        precondition: () => false, // Skip this stage
+        mapper: (result: Response) => JSON.parse(result.body as any).name,
+      })
+      .next<TestRequestResult<typeof thirdUser>>({
+        config: { url: "http://example.com/users/3", method: "GET" },
+      })
+      .execute();
+    // Result should be from third stage
+    assert.strictEqual(result.body, JSON.stringify(thirdUser));
+    // Only first and third requests should be made
+    assert.ok(
+      fetchMockToBeCalledWith("http://example.com/users/1", { method: "GET" })
+    );
+    assert.ok(
+      fetchMockToBeCalledWith("http://example.com/users/3", { method: "GET" })
+    );
+  });
+
+  test("Precondition accessing previous result through closure", async () => {
+    resetFetchMock();
+    fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(thirdUser));
+    const shouldExecuteSecond = false;
+    const result = await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+      },
+      new TestAdapter()
+    )
+      .next<TestRequestResult<typeof secondUser>>({
+        config: { url: "http://example.com/users/2", method: "GET" },
+        precondition: () => {
+          // Precondition can access external state
+          return shouldExecuteSecond;
+        },
+      })
+      .next<TestRequestResult<typeof thirdUser>>({
+        config: { url: "http://example.com/users/3", method: "GET" },
+      })
+      .execute();
+    // Second stage should be skipped because shouldExecuteSecond is false
+    assert.strictEqual(result.body, JSON.stringify(thirdUser));
+    assert.ok(
+      fetchMockToBeCalledWith("http://example.com/users/1", { method: "GET" })
+    );
+    assert.ok(
+      fetchMockToBeCalledWith("http://example.com/users/3", { method: "GET" })
+    );
+    assert.ok(
+      !fetchMockToBeCalledWith("http://example.com/users/2", { method: "GET" })
+    );
+  });
+
+  test("ExecuteAll with precondition - skipped stages should not appear in results", async () => {
+    resetFetchMock();
+    fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(thirdUser));
+    const results = await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+      },
+      new TestAdapter()
+    )
+      .next<TestRequestResult<typeof secondUser>>({
+        config: { url: "http://example.com/users/2", method: "GET" },
+        precondition: () => false, // Skip this stage
+      })
+      .next<TestRequestResult<typeof thirdUser>>({
+        config: { url: "http://example.com/users/3", method: "GET" },
+      })
+      .executeAll();
+    // Should only have results from stages 1 and 3
+    assert.strictEqual(results.length, 2);
+    assert.strictEqual(results[0].body, JSON.stringify(firstUser));
+    assert.strictEqual(results[1].body, JSON.stringify(thirdUser));
   });
 });
