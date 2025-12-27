@@ -9,9 +9,10 @@ A powerful TypeScript library for creating and managing request chains. Flow-pip
 - 📊 **Previous Result Access**: Each step can use the previous request's result
 - 🎯 **Handler Support**: Result, error, and finish handlers
 - 📦 **Batch Execution**: Execute all requests and get all results
-- 🔌 **Custom Adapters**: Use custom request adapters
+- 🔌 **Modular Adapters**: Choose from Fetch, Axios, or Superagent adapters (or create your own)
 - 🎨 **Nested Chains**: Support for nested request managers
 - ⚡ **TypeScript First**: Full TypeScript support with type inference
+- 📦 **Tree-Shakeable**: Install only the adapter you need for smaller bundle sizes
 
 ## Table of Contents
 
@@ -34,17 +35,25 @@ Install the main package which includes everything:
 npm install flow-pipe
 ```
 
-### Individual Packages
+### Individual Packages (Modular Installation)
 
-You can also install packages individually for more control:
+For better tree-shaking and smaller bundle sizes, you can install packages individually:
 
 ```bash
 # Core package (required)
 npm install @flow-pipe/core
 
-# Fetch adapter (required for HTTP requests)
-npm install @flow-pipe/adapter-fetch
+# Choose your adapter (install only what you need):
+npm install @flow-pipe/adapter-fetch      # Native Fetch API (Node.js 18+ / browsers)
+npm install @flow-pipe/adapter-axios      # Axios adapter
+npm install @flow-pipe/adapter-superagent # Superagent adapter
 ```
+
+**Benefits of modular installation:**
+- 🎯 **Smaller bundles**: Only include the adapter you use
+- 🔄 **Flexibility**: Switch adapters without changing your code
+- 📦 **Independent versioning**: Each adapter can be updated independently
+- 🚀 **Better tree-shaking**: Unused adapters are eliminated from your bundle
 
 See [MONOREPO_MIGRATION.md](./MONOREPO_MIGRATION.md) for more details on the package structure.
 
@@ -53,10 +62,15 @@ See [MONOREPO_MIGRATION.md](./MONOREPO_MIGRATION.md) for more details on the pac
 Here's a minimal example to get you started:
 
 ```typescript
-import { RequestChain } from 'flow-pipe';
-import { FetchRequestAdapter } from 'flow-pipe/adapter-fetch';
+// Option 1: Using the main package (includes all adapters)
+import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+
+// Option 2: Using individual packages (better for tree-shaking)
+// import { RequestChain } from '@flow-pipe/core';
+// import { FetchRequestAdapter } from '@flow-pipe/adapter-fetch';
 
 // Create a simple GET request chain
+const adapter = new FetchRequestAdapter();
 const result = await RequestChain.begin(
   {
     config: { 
@@ -64,13 +78,16 @@ const result = await RequestChain.begin(
       method: 'GET' 
     }
   },
-  new FetchRequestAdapter()
+  adapter
 ).execute();
 
 console.log(await result.json()); // User data
 ```
 
-**Important**: You must provide a request adapter (like `FetchRequestAdapter`) when starting a chain. Adapters handle the actual HTTP requests.
+**Important**: 
+- You must provide a request adapter when starting a chain. Adapters handle the actual HTTP requests.
+- Choose the adapter that fits your needs: `FetchRequestAdapter` (native Fetch), `AxiosRequestAdapter`, or `SuperagentRequestAdapter`.
+- See the [Adapters](#adapters) section for details on each adapter and when to use them.
 
 ## Basic Usage
 
@@ -628,23 +645,36 @@ const results = await chain.executeAll();
 
 ## Adapters
 
-Adapters are responsible for executing the actual HTTP requests. Flow-pipe requires an adapter to be provided when starting a chain.
+Adapters are responsible for executing the actual HTTP requests. Flow-pipe uses a **modular adapter system** that allows you to choose the HTTP library that best fits your needs. Each adapter is a separate package, enabling better tree-shaking and smaller bundle sizes.
 
-### Using Built-in Adapters
+> **Recent Improvements**: Flow-pipe has been restructured as a monorepo with modular adapters. This enables:
+> - ✅ **Independent versioning** of each adapter
+> - ✅ **Better tree-shaking** - only include the adapter you use
+> - ✅ **Smaller bundle sizes** - no need to bundle unused adapters
+> - ✅ **Easy adapter switching** - swap adapters without code changes
+> - ✅ **Custom adapter support** - create and publish your own adapters
 
-Flow-pipe comes with adapters that can be installed separately:
+### Available Adapters
 
-#### Fetch Adapter
+Flow-pipe provides three official adapters, each optimized for different use cases:
 
-The Fetch adapter uses the native Fetch API (available in Node.js 18+ and browsers):
+#### 1. Fetch Adapter (Recommended for most cases)
 
+The Fetch adapter uses the native Fetch API, available in Node.js 18+ and modern browsers. **No additional dependencies required.**
+
+**Installation:**
 ```bash
 npm install @flow-pipe/adapter-fetch @flow-pipe/core
+# Or from main package:
+npm install flow-pipe
 ```
 
+**Usage:**
 ```typescript
 import { RequestChain } from '@flow-pipe/core';
 import { FetchRequestAdapter } from '@flow-pipe/adapter-fetch';
+// Or from main package:
+// import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
 
 const adapter = new FetchRequestAdapter();
 
@@ -657,37 +687,157 @@ const result = await RequestChain.begin(
   },
   adapter
 ).execute();
+
+const data = await result.json(); // Standard Response object
 ```
 
-Or using the main package:
+**Best for:** Modern Node.js applications, browser environments, minimal bundle size
 
+**Features:**
+- Zero dependencies (uses native Fetch API)
+- Standard `Response` object
+- Automatic JSON stringification for request bodies
+- Supports all Fetch API options
+
+#### 2. Axios Adapter
+
+The Axios adapter provides automatic JSON parsing, better error handling, and request/response interceptors.
+
+**Installation:**
+```bash
+npm install @flow-pipe/adapter-axios @flow-pipe/core axios
+# Or from main package:
+npm install flow-pipe axios
+```
+
+**Usage:**
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain } from '@flow-pipe/core';
+import { AxiosRequestAdapter } from '@flow-pipe/adapter-axios';
+// Or from main package:
+// import { RequestChain, AxiosRequestAdapter } from 'flow-pipe';
 
-const adapter = new FetchRequestAdapter();
+const adapter = new AxiosRequestAdapter();
+
 const result = await RequestChain.begin(
-  { config: { url: 'https://api.example.com/users', method: 'GET' } },
+  { 
+    config: { 
+      url: 'https://api.example.com/users', 
+      method: 'GET' 
+    } 
+  },
   adapter
 ).execute();
+
+console.log(result.data); // Already parsed JSON - no .json() needed!
+console.log(result.status); // HTTP status code
 ```
 
-#### Fetch Adapter Configuration
+**Best for:** Applications already using Axios, need interceptors, or prefer automatic JSON parsing
 
-The `FetchRequestAdapter` accepts standard `IRequestConfig` objects compatible with the Fetch API:
+**Features:**
+- Automatic JSON parsing (no `.json()` calls needed)
+- Better error handling (throws on HTTP errors)
+- Request/response interceptors support
+- Query parameters via `params` option
+- Request cancellation support
+
+#### 3. Superagent Adapter
+
+The Superagent adapter offers a lightweight alternative with excellent browser and Node.js support.
+
+**Installation:**
+```bash
+npm install @flow-pipe/adapter-superagent @flow-pipe/core superagent
+# Or from main package:
+npm install flow-pipe superagent
+```
+
+**Usage:**
+```typescript
+import { RequestChain } from '@flow-pipe/core';
+import { SuperagentRequestAdapter } from '@flow-pipe/adapter-superagent';
+// Or from main package:
+// import { RequestChain, SuperagentRequestAdapter } from 'flow-pipe';
+
+const adapter = new SuperagentRequestAdapter();
+
+const result = await RequestChain.begin(
+  { 
+    config: { 
+      url: 'https://api.example.com/users', 
+      method: 'GET' 
+    } 
+  },
+  adapter
+).execute();
+
+console.log(result.body); // Already parsed JSON
+console.log(result.status); // HTTP status code
+```
+
+**Best for:** Cross-platform applications, lightweight requirements, fluent API preference
+
+**Features:**
+- Automatic JSON parsing
+- Cross-platform (browser & Node.js)
+- Lightweight bundle size
+- Fluent API design
+
+### Importing Adapters
+
+You can import adapters in two ways:
+
+**Option 1: From individual packages (recommended for tree-shaking)**
+```typescript
+import { RequestChain } from '@flow-pipe/core';
+import { FetchRequestAdapter } from '@flow-pipe/adapter-fetch';
+```
+
+**Option 2: From main package (convenient, but includes all adapters)**
+```typescript
+import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+```
+
+**Option 3: Using subpath exports (from main package)**
+```typescript
+import { RequestChain } from 'flow-pipe';
+import { FetchRequestAdapter } from 'flow-pipe/adapter-fetch';
+```
+
+### Adapter Comparison
+
+| Feature | Fetch | Axios | Superagent |
+|---------|-------|-------|------------|
+| Dependencies | None (native) | axios | superagent |
+| JSON Parsing | Manual (`.json()`) | Automatic | Automatic |
+| Error Handling | Manual status checks | Automatic throws | Automatic throws |
+| Bundle Size | Smallest | Medium | Small |
+| Interceptors | ❌ | ✅ | ❌ |
+| Query Params | URL string | `params` option | URL string |
+| Browser Support | Modern browsers | All | All |
+| Node.js Support | 18+ | All versions | All versions |
+
+### Switching Adapters
+
+All adapters share the same interface, making it easy to switch:
 
 ```typescript
-interface FetchRequestConfig extends IRequestConfig {
-  url: string;
-  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS";
-  data?: any; // Will be JSON stringified for non-GET requests
-  headers?: Record<string, string>;
-  // ... other fetch options (credentials, cache, etc.)
-}
+// Easy to swap adapters - same API!
+const fetchAdapter = new FetchRequestAdapter();
+const axiosAdapter = new AxiosRequestAdapter();
+const superagentAdapter = new SuperagentRequestAdapter();
+
+// Use any adapter with the same code
+const result = await RequestChain.begin(
+  { config: { url: '...', method: 'GET' } },
+  fetchAdapter // or axiosAdapter, or superagentAdapter
+).execute();
 ```
 
 ### Creating Custom Adapters
 
-Use custom request adapters to extend functionality or integrate with other HTTP libraries:
+The modular adapter system makes it easy to create custom adapters for any HTTP library. All adapters extend the base `RequestAdapter` class:
 
 ```typescript
 import { RequestAdapter, IRequestConfig } from '@flow-pipe/core';
@@ -723,7 +873,13 @@ const result = await RequestChain.begin(
 ).execute();
 ```
 
-For more details on creating adapters, see the [adapter template](./packages/ADAPTER_TEMPLATE.md).
+**Benefits of the modular adapter system:**
+- ✅ **Consistent API**: All adapters work the same way
+- ✅ **Type-safe**: Full TypeScript support for custom adapters
+- ✅ **Independent packages**: Publish your adapter separately
+- ✅ **Easy testing**: Mock adapters for unit tests
+
+For a complete guide on creating adapters, see the [adapter template](./packages/ADAPTER_TEMPLATE.md).
 
 ## Common Patterns
 
@@ -952,10 +1108,14 @@ interface ResultHandler<T = unknown> {
 
 **Problem**: You're trying to start a chain without providing an adapter.
 
-**Solution**: Always provide an adapter when calling `RequestChain.begin()` or `begin()`:
+**Solution**: Always provide an adapter when calling `RequestChain.begin()` or `begin()`. Make sure you've installed the adapter package:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+// Make sure you've installed the adapter:
+// npm install @flow-pipe/adapter-fetch @flow-pipe/core
+
+import { RequestChain } from '@flow-pipe/core';
+import { FetchRequestAdapter } from '@flow-pipe/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 const result = await RequestChain.begin(
@@ -964,19 +1124,44 @@ const result = await RequestChain.begin(
 ).execute();
 ```
 
-#### "Cannot read property 'body' of undefined"
+#### "Cannot find module '@flow-pipe/adapter-*'"
 
-**Problem**: You're trying to access properties on a Response object directly.
+**Problem**: The adapter package is not installed.
 
-**Solution**: Use `.json()` or other Response methods to extract data:
+**Solution**: Install the adapter package you need:
+
+```bash
+# For Fetch adapter
+npm install @flow-pipe/adapter-fetch @flow-pipe/core
+
+# For Axios adapter
+npm install @flow-pipe/adapter-axios @flow-pipe/core axios
+
+# For Superagent adapter
+npm install @flow-pipe/adapter-superagent @flow-pipe/core superagent
+
+# Or install the main package (includes all adapters)
+npm install flow-pipe
+```
+
+#### "Cannot read property 'body' of undefined" or Response handling differences
+
+**Problem**: Different adapters return different response formats.
+
+**Solution**: Each adapter returns a different response type:
 
 ```typescript
-// ❌ Wrong
-const userId = result.body.id;
+// Fetch adapter - returns standard Response
+const fetchResult = await RequestChain.begin(..., fetchAdapter).execute();
+const data = await fetchResult.json(); // Must call .json()
 
-// ✅ Correct
-const data = await result.json();
-const userId = data.id;
+// Axios adapter - returns AxiosResponse with parsed data
+const axiosResult = await RequestChain.begin(..., axiosAdapter).execute();
+const data = axiosResult.data; // Already parsed, no .json() needed
+
+// Superagent adapter - returns Superagent Response with parsed body
+const superagentResult = await RequestChain.begin(..., superagentAdapter).execute();
+const data = superagentResult.body; // Already parsed, no .json() needed
 ```
 
 #### TypeScript Type Errors
