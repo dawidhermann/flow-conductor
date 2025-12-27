@@ -17,13 +17,3 @@ export type {
   ErrorHandler,
   ResultHandler,
 } from "@flow-pipe/core";
-
-// Re-export adapters
-export {
-  default as FetchRequestAdapter,
-  FetchRequestConfig,
-} from "@flow-pipe/adapter-fetch";
-export {
-  default as AxiosRequestAdapter,
-  AxiosRequestConfigType,
-} from "@flow-pipe/adapter-axios";
