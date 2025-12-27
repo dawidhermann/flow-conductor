@@ -4,7 +4,9 @@ import type {
   IRequestConfig,
   PipelineRequestStage,
   PipelineManagerStage,
+  RetryConfig,
 } from "./models/RequestParams";
+import { defaultRetryCondition } from "./utils/retryUtils";
 
 /**
  * A chainable request pipeline that allows sequential execution of HTTP requests.
@@ -256,12 +258,13 @@ export default class RequestChain<
   /**
    * Executes a single request entity (stage).
    * Handles both request stages and nested manager stages.
+   * Implements retry logic for request stages when retry configuration is provided.
    *
    * @template Out - The output type
    * @param requestEntity - The pipeline stage to execute
    * @param previousResult - The result from the previous stage (optional)
    * @returns A promise that resolves to the stage result
-   * @throws {Error} If the stage type is unknown
+   * @throws {Error} If the stage type is unknown or all retries are exhausted
    */
   private executeSingle = async <Out>(
     requestEntity:
@@ -270,13 +273,23 @@ export default class RequestChain<
     previousResult?: Out
   ): Promise<Out> => {
     if (isPipelineRequestStage(requestEntity)) {
-      const { config } = requestEntity;
+      const { config, retry } = requestEntity;
       const requestConfig: AdapterRequestConfig =
         typeof config === "function"
           ? (config(
               previousResult as AdapterExecutionResult
             ) as AdapterRequestConfig)
           : (config as AdapterRequestConfig);
+
+      // If retry config is provided, wrap execution in retry logic
+      if (retry) {
+        return this.executeWithRetry<Out>(
+          requestConfig,
+          retry
+        );
+      }
+
+      // No retry config, execute normally
       const rawResult: AdapterExecutionResult =
         await this.adapter.executeRequest(requestConfig);
       return this.adapter.getResult(rawResult) as unknown as Out;
@@ -290,6 +303,104 @@ export default class RequestChain<
       throw new Error("Unknown type");
     }
   };
+
+  /**
+   * Executes a request with retry logic based on the provided retry configuration.
+   *
+   * @template Out - The output type
+   * @param requestConfig - The request configuration
+   * @param retryConfig - The retry configuration
+   * @returns A promise that resolves to the request result
+   * @throws {Error} If all retry attempts are exhausted
+   */
+  private executeWithRetry = async <Out>(
+    requestConfig: AdapterRequestConfig,
+    retryConfig: RetryConfig
+  ): Promise<Out> => {
+    const maxRetries = retryConfig.maxRetries ?? 3;
+    const retryCondition =
+      retryConfig.retryCondition ?? defaultRetryCondition;
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const rawResult: AdapterExecutionResult =
+          await this.adapter.executeRequest(requestConfig);
+        return this.adapter.getResult(rawResult) as unknown as Out;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        // Check if we should retry
+        const shouldRetry =
+          attempt < maxRetries && retryCondition(lastError, attempt);
+
+        if (!shouldRetry) {
+          throw lastError;
+        }
+
+        // Calculate delay before retrying
+        const delay = this.calculateRetryDelay(
+          attempt + 1,
+          lastError,
+          retryConfig
+        );
+
+        // Wait before retrying
+        if (delay > 0) {
+          await this.sleep(delay);
+        }
+      }
+    }
+
+    // This should never be reached, but TypeScript needs it
+    throw lastError || new Error("Retry failed");
+  };
+
+  /**
+   * Calculates the delay before the next retry attempt.
+   *
+   * @param attempt - The current attempt number (1-indexed for retries)
+   * @param error - The error that occurred
+   * @param retryConfig - The retry configuration
+   * @returns The delay in milliseconds
+   */
+  private calculateRetryDelay(
+    attempt: number,
+    error: Error,
+    retryConfig: RetryConfig
+  ): number {
+    const baseDelay = retryConfig.retryDelay ?? 1000;
+    const maxDelay = retryConfig.maxDelay;
+
+    let delay: number;
+
+    if (typeof baseDelay === "function") {
+      // Custom delay function
+      delay = baseDelay(attempt, error);
+    } else if (retryConfig.exponentialBackoff) {
+      // Exponential backoff: delay * 2^attempt
+      delay = baseDelay * Math.pow(2, attempt - 1);
+      // Apply maxDelay cap if provided
+      if (maxDelay !== undefined && delay > maxDelay) {
+        delay = maxDelay;
+      }
+    } else {
+      // Fixed delay
+      delay = baseDelay;
+    }
+
+    return Math.max(0, delay);
+  }
+
+  /**
+   * Sleeps for the specified number of milliseconds.
+   *
+   * @param ms - Milliseconds to sleep
+   * @returns A promise that resolves after the delay
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
   //  #endregion
 }

@@ -51,6 +51,76 @@ export type IRequestConfigFactory<
 > = (previousResult?: Result) => AdapterRequestConfig;
 
 /**
+ * Configuration for retry behavior when a request fails.
+ *
+ * @example
+ * ```typescript
+ * // Retry on network errors and 5xx status codes
+ * retry: {
+ *   maxRetries: 3,
+ *   retryDelay: 1000,
+ *   exponentialBackoff: true,
+ *   maxDelay: 10000,
+ *   retryCondition: (error, attempt) => {
+ *     // Retry on network errors
+ *     if (error.name === 'TypeError' || error.name === 'NetworkError') {
+ *       return true;
+ *     }
+ *     // Retry on 5xx and 429 status codes
+ *     const status = getErrorStatus(error);
+ *     return status !== undefined && (status >= 500 || status === 429);
+ *   }
+ * }
+ * ```
+ */
+export interface RetryConfig {
+  /**
+   * Maximum number of retry attempts. Defaults to 3.
+   */
+  maxRetries?: number;
+  /**
+   * Delay between retries in milliseconds.
+   * Can be a fixed number or a function that calculates delay based on attempt number and error.
+   * Defaults to 1000ms.
+   *
+   * @example
+   * ```typescript
+   * // Fixed delay
+   * retryDelay: 2000
+   *
+   * // Custom delay function
+   * retryDelay: (attempt, error) => attempt * 1000
+   *
+   * // Exponential backoff (use exponentialBackoff: true instead)
+   * retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000)
+   * ```
+   */
+  retryDelay?: number | ((attempt: number, error: Error) => number);
+  /**
+   * Whether to use exponential backoff for retry delays.
+   * When true, delays will be: delay * 2^attempt, capped at maxDelay if provided.
+   * Defaults to false.
+   */
+  exponentialBackoff?: boolean;
+  /**
+   * Maximum delay cap in milliseconds when using exponential backoff.
+   * Prevents delays from growing too large.
+   * Only applies when exponentialBackoff is true.
+   */
+  maxDelay?: number;
+  /**
+   * Function that determines whether to retry based on the error and attempt number.
+   * Return true to retry, false to stop retrying.
+   * If not provided, defaults to retrying on network errors only.
+   *
+   * @param error - The error that occurred
+   * @param attempt - The current attempt number (0-indexed, so first retry is attempt 1)
+   * @returns True if the request should be retried, false otherwise
+   */
+  retryCondition?: (error: Error, attempt: number) => boolean;
+}
+
+/**
  * Base interface for pipeline stages.
  * Defines common properties shared by all pipeline stage types.
  *
@@ -92,6 +162,11 @@ export interface PipelineRequestStage<
   config:
     | AdapterRequestConfig
     | IRequestConfigFactory<Result, AdapterRequestConfig>;
+  /**
+   * Optional retry configuration for handling request failures.
+   * Only applies to request stages, not nested manager stages.
+   */
+  retry?: RetryConfig;
 }
 
 /**

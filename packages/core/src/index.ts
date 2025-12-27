@@ -21,6 +21,7 @@ export type {
   PipelineRequestStage,
   PipelineManagerStage,
   BasePipelineStage,
+  RetryConfig,
 } from "./models/RequestParams";
 
 export type { ErrorHandler, ResultHandler } from "./models/Handlers";
@@ -28,4 +29,13 @@ export type { ErrorHandler, ResultHandler } from "./models/Handlers";
 // Security utilities
 export { validateUrl, SSRFError } from "./utils/urlValidator";
 export type { UrlValidationOptions } from "./utils/urlValidator";
+
+// Retry utilities
+export {
+  getErrorStatus,
+  isNetworkError,
+  defaultRetryCondition,
+  retryOnStatusCodes,
+  retryOnNetworkOrStatusCodes,
+} from "./utils/retryUtils";
 
