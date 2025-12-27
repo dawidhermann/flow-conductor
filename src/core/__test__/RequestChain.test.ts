@@ -341,7 +341,9 @@ describe("Returning all requests", () => {
       .withErrorHandler((error: Error): void => {
         assert.strictEqual(error.message, "fake error message");
       });
-    await requestChain.executeAll();
+    await requestChain.executeAll().catch(() => {
+      // Catch used only for tests - error handler should be called
+    });
     assert.ok(!resultHandler.toHaveBeenCalled());
     assert.ok(
       fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })
@@ -696,7 +698,9 @@ describe("Exported begin function test", () => {
       .withErrorHandler((error: Error): void => {
         assert.strictEqual(error.message, "fake error message");
       });
-    await requestChain.executeAll();
+    await requestChain.executeAll().catch(() => {
+      // Catch used only for tests - error handler should be called
+    });
     assert.ok(!resultHandler.toHaveBeenCalled());
     assert.ok(
       fetchMockToBeCalledWith("http://example.com/users", { method: "GET" })

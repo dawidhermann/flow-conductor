@@ -9,9 +9,13 @@ export default class FetchRequestAdapter extends RequestAdapter<
 > {
   public createRequest(requestConfig: IRequestConfig): Promise<Response> {
     const { data, url, ...rest } = requestConfig;
-    const fetchConfig: any = { ...rest };
+    const fetchConfig: RequestInit = { ...rest };
     if (data) {
-      fetchConfig.data = JSON.stringify(data);
+      fetchConfig.body = typeof data === "string" ? data : JSON.stringify(data);
+      fetchConfig.headers = {
+        ...(fetchConfig.headers as Record<string, string>),
+        "Content-Type": "application/json",
+      };
     }
     return fetch(url, fetchConfig);
   }

@@ -87,7 +87,7 @@ export default class RequestChain<
     } catch (error) {
       if (this.errorHandler) {
         this.errorHandler(error);
-        return Promise.resolve(error);
+        return Promise.reject(error);
       } else {
         throw error;
       }
@@ -239,7 +239,7 @@ function isPipelineRequestStage<
   Out,
   AdapterRequestConfig
 > {
-  return "config" in stage;
+  return "config" in stage && !("request" in stage);
 }
 
 function isPipelineManagerStage<
@@ -248,12 +248,12 @@ function isPipelineManagerStage<
   AdapterRequestConfig extends IRequestConfig = IRequestConfig,
 >(
   stage:
-    | PipelineRequestStage<Out, AdapterRequestConfig>
+    | PipelineRequestStage<AdapterExecutionResult, Out, AdapterRequestConfig>
     | PipelineManagerStage<Out, AdapterExecutionResult, AdapterRequestConfig>
 ): stage is PipelineManagerStage<
   Out,
   AdapterExecutionResult,
   AdapterRequestConfig
 > {
-  return "request" in stage;
+  return "request" in stage && !("config" in stage);
 }
