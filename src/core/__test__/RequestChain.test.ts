@@ -1,10 +1,7 @@
 import { describe, test } from "node:test";
 import * as assert from "node:assert";
 import RequestChain, { begin } from "../RequestChain";
-import type {
-  IRequestResult,
-  PipelineRequestStage,
-} from "core/models/RequestParams";
+import type { PipelineRequestStage } from "core/models/RequestParams";
 import type { ResultHandler } from "core/models/Handlers";
 import type RequestAdapter from "core/RequestAdapter";
 import fetchMock, {
@@ -20,7 +17,7 @@ const secondUser = { id: 2, name: "Bruce Wayne" };
 const thirdUser = { id: 3, name: "Tony Stark" };
 
 // Extended request result type based on actual usage in tests
-interface TestRequestResult<T> extends IRequestResult {
+interface TestRequestResult<T> {
   body: string;
   customParam?: string;
   json: () => Promise<T>;
@@ -149,7 +146,7 @@ describe("Handlers test", () => {
       },
       new FetchRequestAdapter()
     )
-      .withResultHandler((result: IRequestResult): void => {
+      .withResultHandler((result: unknown): void => {
         assert.strictEqual(
           (result as TestRequestResult<typeof firstUser>).body,
           response
@@ -272,9 +269,7 @@ describe("Returning all requests", () => {
 
   test("Execute all with result handler", async () => {
     resetFetchMock();
-    const resultHandler: ResultHandler = (
-      result: IRequestResult | IRequestResult[]
-    ): void => {
+    const resultHandler: ResultHandler = (result: unknown): void => {
       const results = result as Array<
         TestRequestResult<typeof firstUser> | string
       >;
@@ -510,7 +505,7 @@ describe("Exported begin function test", () => {
       },
       new FetchRequestAdapter()
     )
-      .withResultHandler((result: IRequestResult): void => {
+      .withResultHandler((result: unknown): void => {
         assert.strictEqual(
           (result as TestRequestResult<typeof firstUser>).body,
           response
@@ -637,9 +632,7 @@ describe("Exported begin function test", () => {
 
   test("Execute all with result handler", async () => {
     resetFetchMock();
-    const resultHandler: ResultHandler = (
-      result: IRequestResult | IRequestResult[]
-    ): void => {
+    const resultHandler: ResultHandler = (result: unknown): void => {
       const results = result as Array<
         TestRequestResult<typeof firstUser> | string
       >;

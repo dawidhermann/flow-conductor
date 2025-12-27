@@ -436,8 +436,8 @@ console.log(result.customParam); // 'testParam'
 #### Instance Methods
 
 - `next<T extends PipelineRequestStage>(requestEntity: T): RequestChain` - Add the next request to the chain
-- `execute(): Promise<IRequestResult>` - Execute the chain and return the last result
-- `executeAll(): Promise<IRequestResult[]>` - Execute all requests and return all results
+- `execute(): Promise<Out>` - Execute the chain and return the last result
+- `executeAll(): Promise<Types>` - Execute all requests and return all results as a tuple
 - `setRequestAdapter(adapter: RequestAdapter): RequestManager` - Set a custom request adapter
 - `withResultHandler(handler: IResultHandler): RequestManager` - Set result handler
 - `withErrorHandler(handler: IErrorHandler): RequestManager` - Set error handler
@@ -463,10 +463,10 @@ interface IRequestConfig {
 #### PipelineRequestStage
 
 ```typescript
-interface PipelineRequestStage<Result> {
+interface PipelineRequestStage<Result, Out = Result> {
   config: IRequestConfig | IRequestConfigFactory<Result>;
   precondition?: () => boolean;
-  mapper?: (result: IRequestResult) => Result;
+  mapper?: (result: Result) => Promise<Out>;
 }
 ```
 
@@ -485,10 +485,10 @@ This allows each step in the chain to dynamically build its request based on the
 #### PipelineManagerStage
 
 ```typescript
-interface PipelineManagerStage<Result> {
+interface PipelineManagerStage<Out> {
   request: RequestManager;
   precondition?: () => boolean;
-  mapper?: (result: IRequestResult) => Result;
+  mapper?: (result: Out) => Promise<Out>;
 }
 ```
 

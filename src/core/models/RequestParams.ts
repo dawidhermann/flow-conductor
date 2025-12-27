@@ -34,7 +34,9 @@ export interface PipelineRequestStage<
   Out = Result,
   AdapterRequestConfig extends IRequestConfig = IRequestConfig
 > extends BasePipelineStage<Result, Out> {
-  config: AdapterRequestConfig | IRequestConfigFactory<Result, AdapterRequestConfig>;
+  config:
+    | AdapterRequestConfig
+    | IRequestConfigFactory<Result, AdapterRequestConfig>;
 }
 
 export interface PipelineManagerStage<
