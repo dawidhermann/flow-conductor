@@ -6,6 +6,25 @@ import type {
   PipelineManagerStage,
 } from "./models/RequestParams";
 
+/**
+ * A chainable request pipeline that allows sequential execution of HTTP requests.
+ * Each stage can depend on the result of the previous stage, and stages can be conditionally executed.
+ *
+ * @template Out - The output type of the current chain
+ * @template AdapterExecutionResult - The type of result returned by the adapter
+ * @template AdapterRequestConfig - The type of request configuration
+ * @template Types - Tuple type tracking all output types in the chain
+ *
+ * @example
+ * ```typescript
+ * const chain = RequestChain.begin(
+ *   { config: { url: 'https://api.example.com/users', method: 'GET' } },
+ *   adapter
+ * ).next({ config: { url: 'https://api.example.com/posts', method: 'GET' } });
+ *
+ * const result = await chain.execute();
+ * ```
+ */
 export default class RequestChain<
   Out,
   AdapterExecutionResult = Out,
@@ -14,6 +33,17 @@ export default class RequestChain<
 > extends RequestFlow<Out, AdapterExecutionResult, AdapterRequestConfig> {
   //  #region Public methods
 
+  /**
+   * Creates a new RequestChain with an initial stage.
+   * This is the entry point for building a request chain.
+   *
+   * @template Out - The output type of the initial stage
+   * @template AdapterExecutionResult - The type of result returned by the adapter
+   * @template AdapterRequestConfig - The type of request configuration
+   * @param stage - The initial pipeline stage (request or manager stage)
+   * @param adapter - The request adapter to use for HTTP requests
+   * @returns A new RequestChain instance with the initial stage
+   */
   public static begin = <
     Out,
     AdapterExecutionResult,
@@ -34,6 +64,14 @@ export default class RequestChain<
     return requestChain.next(stage);
   };
 
+  /**
+   * Adds a new stage to the request chain and returns a new chain with updated types.
+   * This method enables type-safe chaining of requests.
+   *
+   * @template NewOut - The output type of the new stage
+   * @param stage - The pipeline stage to add (request or manager stage)
+   * @returns A new RequestChain instance with the added stage
+   */
   public next = <NewOut>(
     stage:
       | PipelineRequestStage<
@@ -55,6 +93,13 @@ export default class RequestChain<
     return this.addRequestEntity(stage);
   };
 
+  /**
+   * Executes all stages in the chain sequentially and returns the final result.
+   * Handles errors and calls registered handlers appropriately.
+   *
+   * @returns A promise that resolves to the final output result
+   * @throws {Error} If an error occurs and no error handler is registered
+   */
   public execute = async (): Promise<Out> => {
     try {
       const results: Out[] = await this.executeAllRequests(this.requestList);
@@ -77,6 +122,13 @@ export default class RequestChain<
     }
   };
 
+  /**
+   * Executes all stages in the chain and returns all results as a tuple.
+   * Useful when you need access to intermediate results.
+   *
+   * @returns A promise that resolves to a tuple of all stage results
+   * @throws {Error} If an error occurs and no error handler is registered
+   */
   public async executeAll(): Promise<Types> {
     try {
       const results = await this.executeAllRequests(this.requestList);
@@ -102,6 +154,13 @@ export default class RequestChain<
 
   //  #region Private methods
 
+  /**
+   * Adds a request entity (stage) to the internal request list.
+   *
+   * @template NewOut - The output type of the new stage
+   * @param stage - The pipeline stage to add
+   * @returns A new RequestChain instance with updated types
+   */
   private addRequestEntity = <NewOut>(
     stage:
       | PipelineRequestStage<
@@ -129,6 +188,14 @@ export default class RequestChain<
     >;
   };
 
+  /**
+   * Executes all request entities in sequence, handling preconditions and mappers.
+   * Stages with failed preconditions are skipped but preserve the previous result.
+   *
+   * @template Out - The output type
+   * @param requestEntityList - List of pipeline stages to execute
+   * @returns A promise that resolves to an array of all stage results
+   */
   private executeAllRequests = async <Out>(
     requestEntityList: (
       | PipelineRequestStage<AdapterExecutionResult, Out, AdapterRequestConfig>
@@ -186,6 +253,16 @@ export default class RequestChain<
     return results;
   };
 
+  /**
+   * Executes a single request entity (stage).
+   * Handles both request stages and nested manager stages.
+   *
+   * @template Out - The output type
+   * @param requestEntity - The pipeline stage to execute
+   * @param previousResult - The result from the previous stage (optional)
+   * @returns A promise that resolves to the stage result
+   * @throws {Error} If the stage type is unknown
+   */
   private executeSingle = async <Out>(
     requestEntity:
       | PipelineRequestStage<AdapterExecutionResult, Out, AdapterRequestConfig>
@@ -217,6 +294,17 @@ export default class RequestChain<
   //  #endregion
 }
 
+/**
+ * Creates a new RequestChain with an initial stage.
+ * This is a convenience function that wraps RequestChain.begin.
+ *
+ * @template Out - The output type of the initial stage
+ * @template AdapterExecutionResult - The type of result returned by the adapter
+ * @template AdapterRequestConfig - The type of request configuration
+ * @param stage - The initial pipeline stage (request or manager stage)
+ * @param adapter - The request adapter to use for HTTP requests
+ * @returns A new RequestChain instance with the initial stage
+ */
 export function begin<
   Out,
   AdapterExecutionResult,
@@ -237,6 +325,15 @@ export function begin<
   return requestChain.next(stage);
 }
 
+/**
+ * Type guard to check if a stage is a PipelineRequestStage.
+ *
+ * @template Out - The output type
+ * @template AdapterExecutionResult - The adapter execution result type
+ * @template AdapterRequestConfig - The request configuration type
+ * @param stage - The stage to check
+ * @returns True if the stage is a PipelineRequestStage
+ */
 function isPipelineRequestStage<
   Out,
   AdapterExecutionResult,
@@ -253,6 +350,15 @@ function isPipelineRequestStage<
   return "config" in stage && !("request" in stage);
 }
 
+/**
+ * Type guard to check if a stage is a PipelineManagerStage.
+ *
+ * @template Out - The output type
+ * @template AdapterExecutionResult - The adapter execution result type
+ * @template AdapterRequestConfig - The request configuration type
+ * @param stage - The stage to check
+ * @returns True if the stage is a PipelineManagerStage
+ */
 function isPipelineManagerStage<
   Out,
   AdapterExecutionResult,

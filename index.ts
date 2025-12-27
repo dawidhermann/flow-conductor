@@ -1,3 +1,15 @@
+/**
+ * @packageDocumentation
+ * @module flow-pipe
+ *
+ * Flow-Pipe
+ *
+ * A flexible request pipeline library for building sequential HTTP request chains
+ * with support for conditional execution, result mapping, and error handling.
+ *
+ * This is the main entry point that re-exports all core functionality.
+ */
+
 // Re-export from core package
 export {
   RequestChain,

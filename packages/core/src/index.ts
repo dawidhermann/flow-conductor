@@ -1,3 +1,13 @@
+/**
+ * @packageDocumentation
+ * @module @flow-pipe/core
+ * 
+ * Flow-Pipe Core Package
+ * 
+ * A flexible request pipeline library for building sequential HTTP request chains
+ * with support for conditional execution, result mapping, and error handling.
+ */
+
 // Main exports
 export { default as RequestAdapter } from "./RequestAdapter";
 export { default as RequestManager } from "./RequestManager";

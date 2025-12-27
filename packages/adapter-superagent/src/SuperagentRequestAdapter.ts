@@ -2,16 +2,45 @@ import { RequestAdapter } from "@flow-pipe/core";
 import type { IRequestConfig, UrlValidationOptions } from "@flow-pipe/core";
 import superagent, { type Response, type Request } from "superagent";
 
+/**
+ * Request configuration type for Superagent adapter.
+ * Extends IRequestConfig with Superagent-specific options via the index signature.
+ */
 export type SuperagentRequestConfig = IRequestConfig & {};
 
+/**
+ * Request adapter implementation using Superagent as the underlying HTTP client.
+ * Provides a fluent API for building HTTP requests with Superagent.
+ *
+ * @example
+ * ```typescript
+ * const adapter = new SuperagentRequestAdapter();
+ * const chain = begin(
+ *   { config: { url: 'https://api.example.com/users', method: 'GET' } },
+ *   adapter
+ * );
+ * ```
+ */
 export default class SuperagentRequestAdapter extends RequestAdapter<
   Response,
   SuperagentRequestConfig
 > {
+  /**
+   * Creates a new SuperagentRequestAdapter instance.
+   *
+   * @param urlValidationOptions - Optional URL validation options to prevent SSRF attacks
+   */
   constructor(urlValidationOptions?: UrlValidationOptions) {
     super(urlValidationOptions);
   }
 
+  /**
+   * Creates and executes an HTTP request using Superagent.
+   * Supports all standard HTTP methods and automatically handles headers and body data.
+   *
+   * @param requestConfig - The request configuration object
+   * @returns A promise that resolves to a Superagent Response object
+   */
   public async createRequest(
     requestConfig: SuperagentRequestConfig
   ): Promise<Response> {
