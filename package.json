@@ -5,18 +5,21 @@
   "description": "A powerful TypeScript library for creating and managing request chains. Flow-pipe allows you to chain multiple HTTP requests together, transform results, and handle responses with ease.",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
+  "workspaces": [
+    "packages/*"
+  ],
   "exports": {
     ".": {
       "types": "./build/index.d.ts",
       "import": "./build/index.js"
     },
-    "./core/RequestAdapter": {
-      "types": "./build/core/RequestAdapter.d.ts",
-      "import": "./build/core/RequestAdapter.js"
+    "./core": {
+      "types": "./packages/core/build/index.d.ts",
+      "import": "./packages/core/build/index.js"
     },
-    "./core/models/RequestParams": {
-      "types": "./build/core/models/RequestParams.d.ts",
-      "import": "./build/core/models/RequestParams.js"
+    "./adapter-fetch": {
+      "types": "./packages/adapter-fetch/build/index.d.ts",
+      "import": "./packages/adapter-fetch/build/index.js"
     }
   },
   "files": [
@@ -40,17 +43,19 @@
     "typescript"
   ],
   "scripts": {
-    "test": "node --test --import tsx/esm 'src/core/__test__/**/*.test.ts'",
-    "test:watch": "node --test --import tsx/esm --watch 'src/core/__test__/**/*.test.ts'",
+    "test": "npm run test --workspaces",
+    "test:watch": "npm run test:watch --workspace=@flow-pipe/core",
     "test:coverage": "c8 npm test",
     "test:coverage:report": "c8 report --reporter=html",
-    "build": "tsc",
-    "clean": "rm -rf build",
-    "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\"",
-    "type-check": "tsc --noEmit",
+    "build": "npm run build --workspaces && tsc",
+    "build:core": "npm run build --workspace=@flow-pipe/core",
+    "build:adapter-fetch": "npm run build --workspace=@flow-pipe/adapter-fetch",
+    "clean": "rm -rf build && npm run clean --workspaces",
+    "lint": "npm run lint --workspaces && eslint src --ext .ts",
+    "lint:fix": "npm run lint:fix --workspaces && eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"packages/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"packages/**/*.ts\"",
+    "type-check": "npm run type-check --workspaces && tsc --noEmit",
     "prepublishOnly": "npm run clean && npm run lint && npm run type-check && npm run build"
   },
   "author": "Dawid Hermann",
@@ -62,6 +67,10 @@
   "sideEffects": false,
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@flow-pipe/core": "workspace:*",
+    "@flow-pipe/adapter-fetch": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",

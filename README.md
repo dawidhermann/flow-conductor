@@ -14,9 +14,27 @@ A powerful TypeScript library for creating and managing request chains. Flow-pip
 
 ## Installation
 
+### Full Package (Recommended)
+
+Install the main package which includes everything:
+
 ```bash
 npm install flow-pipe
 ```
+
+### Individual Packages
+
+You can also install packages individually:
+
+```bash
+# Core package (required)
+npm install @flow-pipe/core
+
+# Fetch adapter
+npm install @flow-pipe/adapter-fetch
+```
+
+See [MONOREPO_MIGRATION.md](./MONOREPO_MIGRATION.md) for more details on the package structure.
 
 ## Basic Usage
 
@@ -387,13 +405,36 @@ const result = await begin({
   .execute();
 ```
 
-## Custom Adapters
+## Adapters
+
+### Using Built-in Adapters
+
+Flow-pipe comes with adapters that can be installed separately:
+
+#### Fetch Adapter
+
+```bash
+npm install @flow-pipe/adapter-fetch @flow-pipe/core
+```
+
+```typescript
+import { RequestChain } from '@flow-pipe/core';
+import { FetchRequestAdapter } from '@flow-pipe/adapter-fetch';
+
+const result = await RequestChain.begin(
+  { config: { url: 'https://api.example.com/users', method: 'GET' } },
+  new FetchRequestAdapter()
+).execute();
+```
+
+### Creating Custom Adapters
 
 Use custom request adapters to extend functionality:
 
 ```typescript
-import RequestAdapter from 'flow-pipe/core/RequestAdapter';
-import { IRequestConfig } from 'flow-pipe/core/models/RequestParams';
+import { RequestAdapter, IRequestConfig } from '@flow-pipe/core';
+// Or from the main package:
+// import { RequestAdapter, IRequestConfig } from 'flow-pipe';
 
 class CustomAdapter extends RequestAdapter {
   public async createRequest(requestConfig: IRequestConfig): Promise<any> {

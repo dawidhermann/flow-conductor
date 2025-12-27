@@ -1,18 +1,25 @@
-// Main exports
-export { default as RequestChain, begin } from "./core/RequestChain";
-export { default } from "./core/RequestChain";
+// Re-export from core package
+export {
+  RequestChain,
+  begin,
+  RequestAdapter,
+  RequestManager,
+} from "@flow-pipe/core";
+export { default } from "@flow-pipe/core";
 
-// Adapters
-export { default as RequestAdapter } from "./core/RequestAdapter";
-export { default as FetchRequestAdapter } from "./core/adapters/FetchRequestAdapter";
-
-// Types
+// Re-export types from core package
 export type {
   IRequestConfig,
   IRequestConfigFactory,
   PipelineRequestStage,
   PipelineManagerStage,
   BasePipelineStage,
-} from "./core/models/RequestParams";
+  ErrorHandler,
+  ResultHandler,
+} from "@flow-pipe/core";
 
-export type { ErrorHandler, ResultHandler } from "./core/models/Handlers";
+// Re-export adapters
+export {
+  default as FetchRequestAdapter,
+  FetchRequestConfig,
+} from "@flow-pipe/adapter-fetch";
