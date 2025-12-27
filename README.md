@@ -8,6 +8,7 @@ A powerful TypeScript library for creating and managing request chains. Flow-pip
 - 🔄 **Result Transformation**: Map and transform request results
 - 📊 **Previous Result Access**: Each step can use the previous request's result
 - 🎯 **Handler Support**: Result, error, and finish handlers
+- 🔁 **Automatic Retry**: Configurable retry mechanism with exponential backoff
 - 📦 **Batch Execution**: Execute all requests and get all results
 - 🔌 **Modular Adapters**: Choose from Fetch, Axios, or Superagent adapters (or create your own)
 - 🎨 **Nested Chains**: Support for nested request managers
@@ -46,9 +47,10 @@ For better tree-shaking and smaller bundle sizes, you can install packages indiv
 npm install @flow-pipe/core
 
 # Choose your adapter (install only what you need):
-npm install @flow-pipe/adapter-fetch      # Native Fetch API (Node.js 18+ / browsers)
-npm install @flow-pipe/adapter-axios      # Axios adapter
-npm install @flow-pipe/adapter-superagent # Superagent adapter
+npm install @flow-pipe/adapter-fetch         # Native Fetch API (Node.js 18+ / browsers)
+npm install @flow-pipe/adapter-node-fetch    # node-fetch adapter (Node.js only)
+npm install @flow-pipe/adapter-axios         # Axios adapter
+npm install @flow-pipe/adapter-superagent    # Superagent adapter
 ```
 
 **Benefits of modular installation:**
@@ -89,7 +91,7 @@ console.log(await result.json()); // User data
 
 **Important**: 
 - You must provide a request adapter when starting a chain. Adapters handle the actual HTTP requests.
-- Choose the adapter that fits your needs: `FetchRequestAdapter` (native Fetch), `AxiosRequestAdapter`, or `SuperagentRequestAdapter`.
+- Choose the adapter that fits your needs: `FetchRequestAdapter` (native Fetch), `NodeFetchRequestAdapter` (node-fetch), `AxiosRequestAdapter`, or `SuperagentRequestAdapter`.
 - See the [Adapters](#adapters) section for details on each adapter and when to use them.
 
 ## Basic Usage
@@ -408,6 +410,187 @@ await RequestChain.begin(
   });
 ```
 
+### Retry Mechanism
+
+flow-pipe includes a powerful retry mechanism that automatically retries failed requests based on configurable conditions. This is especially useful for handling transient network errors or temporary server issues.
+
+#### Basic Retry Configuration
+
+Retry failed requests with default settings (retries on network errors):
+
+```typescript
+import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+
+const adapter = new FetchRequestAdapter();
+
+const result = await RequestChain.begin(
+  {
+    config: { url: 'https://api.example.com/users', method: 'GET' },
+    retry: {
+      maxRetries: 3, // Retry up to 3 times
+    }
+  },
+  adapter
+).execute();
+```
+
+#### Retry on Specific Status Codes
+
+Retry on specific HTTP status codes (e.g., 5xx server errors or 429 rate limits):
+
+```typescript
+import { RequestChain, FetchRequestAdapter, retryOnStatusCodes } from 'flow-pipe';
+
+const adapter = new FetchRequestAdapter();
+
+const result = await RequestChain.begin(
+  {
+    config: { url: 'https://api.example.com/users', method: 'GET' },
+    retry: {
+      maxRetries: 5,
+      retryCondition: retryOnStatusCodes(500, 502, 503, 504, 429)
+    }
+  },
+  adapter
+).execute();
+```
+
+#### Retry on Network Errors or Status Codes
+
+Retry on both network errors and specific HTTP status codes:
+
+```typescript
+import { RequestChain, FetchRequestAdapter, retryOnNetworkOrStatusCodes } from 'flow-pipe';
+
+const adapter = new FetchRequestAdapter();
+
+const result = await RequestChain.begin(
+  {
+    config: { url: 'https://api.example.com/users', method: 'GET' },
+    retry: {
+      maxRetries: 3,
+      retryCondition: retryOnNetworkOrStatusCodes(500, 502, 503, 504, 429)
+    }
+  },
+  adapter
+).execute();
+```
+
+#### Custom Retry Condition
+
+Define custom logic for when to retry:
+
+```typescript
+import { RequestChain, FetchRequestAdapter, getErrorStatus } from 'flow-pipe';
+
+const adapter = new FetchRequestAdapter();
+
+const result = await RequestChain.begin(
+  {
+    config: { url: 'https://api.example.com/users', method: 'GET' },
+    retry: {
+      maxRetries: 3,
+      retryCondition: (error, attempt) => {
+        // Retry on 5xx errors or rate limits (429)
+        const status = getErrorStatus(error);
+        if (status !== undefined) {
+          return status >= 500 || status === 429;
+        }
+        // Retry on network errors for first 2 attempts
+        return attempt < 2;
+      }
+    }
+  },
+  adapter
+).execute();
+```
+
+#### Retry Delays
+
+Configure delays between retry attempts:
+
+**Fixed Delay:**
+
+```typescript
+const result = await RequestChain.begin(
+  {
+    config: { url: 'https://api.example.com/users', method: 'GET' },
+    retry: {
+      maxRetries: 3,
+      retryDelay: 1000 // Wait 1 second between retries
+    }
+  },
+  adapter
+).execute();
+```
+
+**Exponential Backoff:**
+
+```typescript
+const result = await RequestChain.begin(
+  {
+    config: { url: 'https://api.example.com/users', method: 'GET' },
+    retry: {
+      maxRetries: 5,
+      retryDelay: 1000, // Start with 1 second
+      exponentialBackoff: true, // Double delay each time: 1s, 2s, 4s, 8s...
+      maxDelay: 10000 // Cap at 10 seconds
+    }
+  },
+  adapter
+).execute();
+```
+
+**Custom Delay Function:**
+
+```typescript
+const result = await RequestChain.begin(
+  {
+    config: { url: 'https://api.example.com/users', method: 'GET' },
+    retry: {
+      maxRetries: 3,
+      retryDelay: (attempt, error) => {
+        // Custom delay logic based on attempt number and error
+        const status = getErrorStatus(error);
+        if (status === 429) {
+          // Rate limited - wait longer
+          return 5000;
+        }
+        // Exponential backoff: 1s, 2s, 4s
+        return 1000 * Math.pow(2, attempt - 1);
+      }
+    }
+  },
+  adapter
+).execute();
+```
+
+#### Retry Configuration Options
+
+The `retry` configuration object supports the following options:
+
+- **`maxRetries`** (number, default: `3`): Maximum number of retry attempts
+- **`retryDelay`** (number | function, default: `1000`): Delay in milliseconds between retries. Can be a fixed number or a function `(attempt: number, error: Error) => number`
+- **`exponentialBackoff`** (boolean, default: `false`): Whether to use exponential backoff (doubles delay each retry)
+- **`maxDelay`** (number): Maximum delay cap when using exponential backoff
+- **`retryCondition`** (function, default: retries on network errors): Function that determines whether to retry: `(error: Error, attempt: number) => boolean`
+
+#### Retry Helpers
+
+flow-pipe provides helper functions for common retry scenarios:
+
+- **`retryOnStatusCodes(...codes: number[])`**: Creates a retry condition that retries on specific HTTP status codes
+- **`retryOnNetworkOrStatusCodes(...codes: number[])`**: Creates a retry condition that retries on network errors OR specific status codes
+- **`getErrorStatus(error: Error)`**: Extracts HTTP status code from error objects (works with all adapters)
+- **`isNetworkError(error: Error)`**: Checks if an error is a network error
+
+#### Important Notes
+
+- **Retry only applies to request stages**: Retry configuration is only applied to `PipelineRequestStage` (HTTP requests), not to nested `PipelineManagerStage` (nested chains)
+- **Default behavior**: If no `retryCondition` is provided, retries only occur on network errors (connection failures, timeouts, etc.)
+- **Error handling**: After all retries are exhausted, the error is thrown and can be caught by error handlers or `.catch()`
+- **Per-stage configuration**: Each stage in a chain can have its own retry configuration
+
 ### Executing All Requests
 
 #### Get All Results
@@ -725,7 +908,69 @@ const result = await RequestChain.begin(
 clearTimeout(timeoutId);
 ```
 
-#### 2. Axios Adapter
+#### 2. Node-Fetch Adapter
+
+The Node-Fetch adapter uses the `node-fetch` package, making it ideal for Node.js environments where you need a reliable HTTP client with consistent behavior across Node.js versions.
+
+**Installation:**
+```bash
+npm install @flow-pipe/adapter-node-fetch @flow-pipe/core node-fetch
+# Or install main package and use subpath exports:
+npm install flow-pipe node-fetch
+```
+
+**Usage:**
+```typescript
+import { RequestChain } from '@flow-pipe/core';
+import { NodeFetchRequestAdapter } from '@flow-pipe/adapter-node-fetch';
+// Or using main package with subpath exports:
+// import { RequestChain } from 'flow-pipe';
+// import { NodeFetchRequestAdapter } from 'flow-pipe/adapter-node-fetch';
+
+const adapter = new NodeFetchRequestAdapter();
+
+const result = await RequestChain.begin(
+  { 
+    config: { 
+      url: 'https://api.example.com/users', 
+      method: 'GET' 
+    } 
+  },
+  adapter
+).execute();
+
+const data = await result.json(); // Standard Response object
+```
+
+**Best for:** Node.js-only applications, projects that prefer node-fetch over native fetch
+
+**Features:**
+- Uses `node-fetch` package (explicit dependency)
+- Standard `Response` object
+- Automatic JSON stringification for request bodies
+- Supports all node-fetch options
+- Consistent API across Node.js versions
+
+**Important Notes:**
+- ⚠️ **Requires node-fetch**: You must install `node-fetch` v3.x as a peer dependency
+- ⚠️ **Node.js only**: This adapter is designed for Node.js environments only
+- ⚠️ **ESM only**: node-fetch v3 is ESM-only, ensure your project uses `"type": "module"` in package.json
+- ⚠️ **No default timeout**: You must configure timeouts manually using the `timeout` option:
+
+```typescript
+const result = await RequestChain.begin(
+  {
+    config: {
+      url: 'https://api.example.com/users',
+      method: 'GET',
+      timeout: 5000 // 5 second timeout
+    }
+  },
+  adapter
+).execute();
+```
+
+#### 3. Axios Adapter
 
 The Axios adapter provides automatic JSON parsing, better error handling, and request/response interceptors.
 
@@ -785,7 +1030,7 @@ const result = await RequestChain.begin(
 ).execute();
 ```
 
-#### 3. Superagent Adapter
+#### 4. Superagent Adapter
 
 The Superagent adapter offers a lightweight alternative with excellent browser and Node.js support.
 
@@ -864,6 +1109,7 @@ import { FetchRequestAdapter } from 'flow-pipe/adapter-fetch';
 ```typescript
 import { RequestChain } from 'flow-pipe';
 import { FetchRequestAdapter } from 'flow-pipe/adapter-fetch';
+import { NodeFetchRequestAdapter } from 'flow-pipe/adapter-node-fetch';
 import { AxiosRequestAdapter } from 'flow-pipe/adapter-axios';
 import { SuperagentRequestAdapter } from 'flow-pipe/adapter-superagent';
 ```
@@ -872,16 +1118,17 @@ import { SuperagentRequestAdapter } from 'flow-pipe/adapter-superagent';
 
 ### Adapter Comparison
 
-| Feature | Fetch | Axios | Superagent |
-|---------|-------|-------|------------|
-| Dependencies | None (native) | axios | superagent |
-| JSON Parsing | Manual (`.json()`) | Automatic | Automatic |
-| Error Handling | Manual status checks | Automatic throws | Automatic throws |
-| Bundle Size | Smallest | Medium | Small |
-| Interceptors | ❌ | ✅ | ❌ |
-| Query Params | URL string | `params` option | URL string |
-| Browser Support | Modern browsers | All | All |
-| Node.js Support | 18+ | All versions | All versions |
+| Feature | Fetch | Node-Fetch | Axios | Superagent |
+|---------|-------|------------|-------|------------|
+| Dependencies | None (native) | node-fetch | axios | superagent |
+| JSON Parsing | Manual (`.json()`) | Manual (`.json()`) | Automatic | Automatic |
+| Error Handling | Manual status checks | Manual status checks | Automatic throws | Automatic throws |
+| Bundle Size | Smallest | Small | Medium | Small |
+| Interceptors | ❌ | ❌ | ✅ | ❌ |
+| Query Params | URL string | URL string | `params` option | URL string |
+| Browser Support | Modern browsers | ❌ (Node.js only) | All | All |
+| Node.js Support | 18+ | 18+ | All versions | All versions |
+| Environment | Browser + Node.js | Node.js only | Browser + Node.js | Browser + Node.js |
 
 ### Switching Adapters
 
@@ -890,13 +1137,14 @@ All adapters share the same interface, making it easy to switch:
 ```typescript
 // Easy to swap adapters - same API!
 const fetchAdapter = new FetchRequestAdapter();
+const nodeFetchAdapter = new NodeFetchRequestAdapter();
 const axiosAdapter = new AxiosRequestAdapter();
 const superagentAdapter = new SuperagentRequestAdapter();
 
 // Use any adapter with the same code
 const result = await RequestChain.begin(
   { config: { url: '...', method: 'GET' } },
-  fetchAdapter // or axiosAdapter, or superagentAdapter
+  fetchAdapter // or nodeFetchAdapter, axiosAdapter, or superagentAdapter
 ).execute();
 ```
 
@@ -1052,6 +1300,32 @@ try {
 }
 ```
 
+### Retry with Exponential Backoff
+
+Handle transient failures with automatic retry and exponential backoff:
+
+```typescript
+import { RequestChain, FetchRequestAdapter, retryOnNetworkOrStatusCodes } from 'flow-pipe';
+
+const adapter = new FetchRequestAdapter();
+
+const result = await RequestChain.begin(
+  {
+    config: { url: 'https://api.example.com/users', method: 'GET' },
+    retry: {
+      maxRetries: 5,
+      retryDelay: 1000, // Start with 1 second
+      exponentialBackoff: true, // Double each time: 1s, 2s, 4s, 8s, 16s
+      maxDelay: 10000, // Cap at 10 seconds
+      retryCondition: retryOnNetworkOrStatusCodes(500, 502, 503, 504, 429)
+    }
+  },
+  adapter
+).execute();
+
+console.log(await result.json());
+```
+
 ### Conditional Requests
 
 ```typescript
@@ -1127,8 +1401,9 @@ interface IRequestConfig {
 ```typescript
 interface PipelineRequestStage<Result, Out = Result, AdapterRequestConfig extends IRequestConfig = IRequestConfig> {
   config: AdapterRequestConfig | IRequestConfigFactory<Result, AdapterRequestConfig>;
-  precondition?: () => boolean; // Note: Currently in types but not yet implemented
+  precondition?: () => boolean;
   mapper?: (result: Result) => Out | Promise<Out>;
+  retry?: RetryConfig; // Optional retry configuration
 }
 ```
 
@@ -1151,6 +1426,18 @@ interface PipelineManagerStage<Out, AdapterExecutionResult, AdapterRequestConfig
   request: RequestManager<Out, AdapterExecutionResult, AdapterRequestConfig>;
   precondition?: () => boolean; // Note: Currently in types but not yet implemented
   mapper?: (result: Out) => Out | Promise<Out>;
+}
+```
+
+#### RetryConfig
+
+```typescript
+interface RetryConfig {
+  maxRetries?: number; // Default: 3
+  retryDelay?: number | ((attempt: number, error: Error) => number); // Default: 1000ms
+  exponentialBackoff?: boolean; // Default: false
+  maxDelay?: number; // Maximum delay cap for exponential backoff
+  retryCondition?: (error: Error, attempt: number) => boolean; // Default: retries on network errors
 }
 ```
 
