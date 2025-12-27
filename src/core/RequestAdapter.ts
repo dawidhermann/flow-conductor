@@ -2,7 +2,7 @@ import type { IRequestConfig } from "./models/RequestParams";
 
 export default abstract class RequestAdapter<
   ExecutionResult,
-  RequestConfig extends IRequestConfig = IRequestConfig
+  RequestConfig extends IRequestConfig = IRequestConfig,
 > {
   public abstract createRequest(
     requestConfig: RequestConfig

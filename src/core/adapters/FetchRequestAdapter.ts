@@ -1,5 +1,5 @@
-import RequestAdapter from "../../core/RequestAdapter";
-import { IRequestConfig } from "core/models/RequestParams";
+import RequestAdapter from "../RequestAdapter";
+import { IRequestConfig } from "../models/RequestParams";
 
 export type FetchRequestConfig = IRequestConfig;
 

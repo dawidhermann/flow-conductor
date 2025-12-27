@@ -10,14 +10,14 @@ export default class RequestChain<
   Out,
   AdapterExecutionResult = Out,
   AdapterRequestConfig extends IRequestConfig = IRequestConfig,
-  Types extends readonly unknown[] = [Out]
+  Types extends readonly unknown[] = [Out],
 > extends RequestFlow<Out, AdapterExecutionResult, AdapterRequestConfig> {
   //  #region Public methods
 
   public static begin = <
     Out,
     AdapterExecutionResult,
-    AdapterRequestConfig extends IRequestConfig = IRequestConfig
+    AdapterRequestConfig extends IRequestConfig = IRequestConfig,
   >(
     stage:
       | PipelineRequestStage<AdapterExecutionResult, Out, AdapterRequestConfig>
@@ -209,7 +209,7 @@ export default class RequestChain<
 export function begin<
   Out,
   AdapterExecutionResult,
-  AdapterRequestConfig extends IRequestConfig = IRequestConfig
+  AdapterRequestConfig extends IRequestConfig = IRequestConfig,
 >(
   stage:
     | PipelineRequestStage<AdapterExecutionResult, Out, AdapterRequestConfig>
@@ -229,7 +229,7 @@ export function begin<
 function isPipelineRequestStage<
   Out,
   AdapterExecutionResult,
-  AdapterRequestConfig extends IRequestConfig = IRequestConfig
+  AdapterRequestConfig extends IRequestConfig = IRequestConfig,
 >(
   stage:
     | PipelineRequestStage<AdapterExecutionResult, Out, AdapterRequestConfig>
@@ -245,7 +245,7 @@ function isPipelineRequestStage<
 function isPipelineManagerStage<
   Out,
   AdapterExecutionResult,
-  AdapterRequestConfig extends IRequestConfig = IRequestConfig
+  AdapterRequestConfig extends IRequestConfig = IRequestConfig,
 >(
   stage:
     | PipelineRequestStage<Out, AdapterRequestConfig>

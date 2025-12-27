@@ -1,7 +1,6 @@
 import { describe, test } from "node:test";
 import * as assert from "node:assert";
 import RequestChain, { begin } from "../RequestChain";
-import type { PipelineRequestStage } from "core/models/RequestParams";
 import type { ResultHandler } from "core/models/Handlers";
 import type RequestAdapter from "core/RequestAdapter";
 import fetchMock, {

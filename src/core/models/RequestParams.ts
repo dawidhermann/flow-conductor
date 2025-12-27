@@ -20,7 +20,7 @@ export interface IRequestConfig {
 
 export type IRequestConfigFactory<
   Result,
-  AdapterRequestConfig extends IRequestConfig = IRequestConfig
+  AdapterRequestConfig extends IRequestConfig = IRequestConfig,
 > = (previousResult?: Result) => AdapterRequestConfig;
 
 export interface BasePipelineStage<Result, Out = Result> {
@@ -32,7 +32,7 @@ export interface BasePipelineStage<Result, Out = Result> {
 export interface PipelineRequestStage<
   Result,
   Out = Result,
-  AdapterRequestConfig extends IRequestConfig = IRequestConfig
+  AdapterRequestConfig extends IRequestConfig = IRequestConfig,
 > extends BasePipelineStage<Result, Out> {
   config:
     | AdapterRequestConfig
@@ -42,7 +42,7 @@ export interface PipelineRequestStage<
 export interface PipelineManagerStage<
   Out,
   AdapterExecutionResult,
-  AdapterRequestConfig extends IRequestConfig = IRequestConfig
+  AdapterRequestConfig extends IRequestConfig = IRequestConfig,
 > extends BasePipelineStage<Out> {
   request: RequestFlow<Out, AdapterExecutionResult, AdapterRequestConfig>;
 }

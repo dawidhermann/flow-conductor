@@ -9,9 +9,7 @@ export default class TestAdapter extends RequestAdapter<
   Response,
   IRequestConfig
 > {
-  public async createRequest(
-    requestConfig: IRequestConfig
-  ): Promise<Response> {
+  public async createRequest(requestConfig: IRequestConfig): Promise<Response> {
     const { data, url, ...rest } = requestConfig;
     const fetchConfig: any = { ...rest };
     if (data) {

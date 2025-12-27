@@ -9,7 +9,7 @@ import type { IRequestConfig } from "./models/RequestParams";
 export default abstract class RequestFlow<
   Out,
   AdapterExecutionResult = Out,
-  RequestConfig extends IRequestConfig = IRequestConfig
+  RequestConfig extends IRequestConfig = IRequestConfig,
 > {
   protected requestList: (
     | PipelineRequestStage<any, any, any>
