@@ -42,9 +42,7 @@ export default class NodeFetchRequestAdapter extends RequestAdapter<
    * @param requestConfig - The request configuration object
    * @returns A promise that resolves to a Response object
    */
-  public async createRequest(
-    requestConfig: IRequestConfig
-  ): Promise<Response> {
+  public async createRequest(requestConfig: IRequestConfig): Promise<Response> {
     const { data, url, method, headers, ...rest } = requestConfig;
     const fetchConfig: RequestInit = {
       method,
@@ -61,10 +59,7 @@ export default class NodeFetchRequestAdapter extends RequestAdapter<
       if (data === null) {
         fetchConfig.body = JSON.stringify(null);
         // Set Content-Type header if not already set
-        if (
-          !headersObj["Content-Type"] &&
-          !headersObj["content-type"]
-        ) {
+        if (!headersObj["Content-Type"] && !headersObj["content-type"]) {
           headersObj["Content-Type"] = "application/json";
         }
       } else if (typeof data === "string") {
@@ -74,10 +69,7 @@ export default class NodeFetchRequestAdapter extends RequestAdapter<
       } else {
         fetchConfig.body = JSON.stringify(data);
         // Set Content-Type header if not already set
-        if (
-          !headersObj["Content-Type"] &&
-          !headersObj["content-type"]
-        ) {
+        if (!headersObj["Content-Type"] && !headersObj["content-type"]) {
           headersObj["Content-Type"] = "application/json";
         }
       }
@@ -91,4 +83,3 @@ export default class NodeFetchRequestAdapter extends RequestAdapter<
     return fetch(url, fetchConfig);
   }
 }
-

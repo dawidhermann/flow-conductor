@@ -27,10 +27,7 @@ export default class TestNodeFetchAdapter extends RequestAdapter<
       if (data === null) {
         fetchConfig.body = JSON.stringify(null);
         // Set Content-Type header if not already set
-        if (
-          !headersObj["Content-Type"] &&
-          !headersObj["content-type"]
-        ) {
+        if (!headersObj["Content-Type"] && !headersObj["content-type"]) {
           headersObj["Content-Type"] = "application/json";
         }
       } else if (typeof data === "string") {
@@ -40,10 +37,7 @@ export default class TestNodeFetchAdapter extends RequestAdapter<
       } else {
         fetchConfig.body = JSON.stringify(data);
         // Set Content-Type header if not already set
-        if (
-          !headersObj["Content-Type"] &&
-          !headersObj["content-type"]
-        ) {
+        if (!headersObj["Content-Type"] && !headersObj["content-type"]) {
           headersObj["Content-Type"] = "application/json";
         }
       }
@@ -57,4 +51,3 @@ export default class TestNodeFetchAdapter extends RequestAdapter<
     return mockNodeFetch(url, fetchConfig);
   }
 }
-

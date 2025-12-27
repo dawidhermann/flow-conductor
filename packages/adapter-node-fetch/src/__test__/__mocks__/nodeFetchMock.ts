@@ -48,10 +48,7 @@ class NodeFetchMock {
     return this.calls;
   }
 
-  public toBeCalledWith(
-    url?: string,
-    options?: RequestInit
-  ): boolean {
+  public toBeCalledWith(url?: string, options?: RequestInit): boolean {
     return this.calls.some((call) => {
       if (url && call.url !== url) {
         return false;
@@ -59,21 +56,33 @@ class NodeFetchMock {
 
       if (options) {
         // Check method
-        if (options.method && call.options?.method?.toUpperCase() !== options.method.toUpperCase()) {
+        if (
+          options.method &&
+          call.options?.method?.toUpperCase() !== options.method.toUpperCase()
+        ) {
           return false;
         }
 
         // Check data/body (deep comparison)
         if (options.body !== undefined) {
           const callBody = call.options?.body;
-          if (typeof options.body === "string" && typeof callBody === "string") {
+          if (
+            typeof options.body === "string" &&
+            typeof callBody === "string"
+          ) {
             if (options.body !== callBody) {
               return false;
             }
           } else {
             // For objects, compare JSON strings
-            const callBodyStr = typeof callBody === "string" ? callBody : JSON.stringify(callBody);
-            const optionsBodyStr = typeof options.body === "string" ? options.body : JSON.stringify(options.body);
+            const callBodyStr =
+              typeof callBody === "string"
+                ? callBody
+                : JSON.stringify(callBody);
+            const optionsBodyStr =
+              typeof options.body === "string"
+                ? options.body
+                : JSON.stringify(options.body);
             if (callBodyStr !== optionsBodyStr) {
               return false;
             }
@@ -82,7 +91,9 @@ class NodeFetchMock {
 
         // Check headers (partial match)
         if (options.headers) {
-          const callHeaders = call.options?.headers as Record<string, string> | undefined;
+          const callHeaders = call.options?.headers as
+            | Record<string, string>
+            | undefined;
           const expectedHeaders = options.headers as Record<string, string>;
           if (!callHeaders) {
             return false;
@@ -121,27 +132,35 @@ class NodeFetchMock {
 
       // Create a mock Response object
       const mockResponse = {
-        ok: response.ok ?? (response.status ? response.status >= 200 && response.status < 300 : true),
+        ok:
+          response.ok ??
+          (response.status
+            ? response.status >= 200 && response.status < 300
+            : true),
         status: response.status ?? 200,
         statusText: response.statusText ?? "OK",
         headers: response.headers ?? new Headers(),
         body: response.body ?? null,
-        json: response.json ?? (async () => {
-          if (response.body && typeof response.body === "string") {
-            try {
-              return JSON.parse(response.body);
-            } catch {
-              throw new Error("Invalid JSON");
+        json:
+          response.json ??
+          (async () => {
+            if (response.body && typeof response.body === "string") {
+              try {
+                return JSON.parse(response.body);
+              } catch {
+                throw new Error("Invalid JSON");
+              }
             }
-          }
-          return {};
-        }),
-        text: response.text ?? (async () => {
-          if (response.body && typeof response.body === "string") {
-            return response.body;
-          }
-          return "";
-        }),
+            return {};
+          }),
+        text:
+          response.text ??
+          (async () => {
+            if (response.body && typeof response.body === "string") {
+              return response.body;
+            }
+            return "";
+          }),
         blob: response.blob ?? (async () => new Blob()),
         arrayBuffer: response.arrayBuffer ?? (async () => new ArrayBuffer(0)),
       } as Response;
@@ -180,4 +199,3 @@ export const nodeFetchMockToBeCalledWith = (
 // Export the mock instance for chaining
 export default nodeFetchMock;
 export const mockNodeFetch = nodeFetchMock.fetch.bind(nodeFetchMock);
-

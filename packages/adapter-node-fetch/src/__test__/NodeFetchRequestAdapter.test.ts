@@ -258,11 +258,7 @@ describe("NodeFetchRequestAdapter", () => {
       });
 
       const adapter = new TestNodeFetchAdapter();
-      await RequestChain.begin<
-        Response,
-        Response,
-        NodeFetchRequestConfig
-      >(
+      await RequestChain.begin<Response, Response, NodeFetchRequestConfig>(
         {
           config: {
             url: "http://example.com/users",
@@ -426,11 +422,7 @@ describe("NodeFetchRequestAdapter", () => {
       let errorThrown = false;
 
       try {
-        await RequestChain.begin<
-          Response,
-          Response,
-          NodeFetchRequestConfig
-        >(
+        await RequestChain.begin<Response, Response, NodeFetchRequestConfig>(
           {
             config: { url: "http://example.com/users", method: "GET" },
           },
@@ -487,11 +479,7 @@ describe("NodeFetchRequestAdapter", () => {
       });
 
       const adapter = new TestNodeFetchAdapter();
-      await RequestChain.begin<
-        Response,
-        Response,
-        NodeFetchRequestConfig
-      >(
+      await RequestChain.begin<Response, Response, NodeFetchRequestConfig>(
         {
           config: {
             url: "http://example.com/users",
@@ -520,11 +508,7 @@ describe("NodeFetchRequestAdapter", () => {
       });
 
       const adapter = new TestNodeFetchAdapter();
-      await RequestChain.begin<
-        Response,
-        Response,
-        NodeFetchRequestConfig
-      >(
+      await RequestChain.begin<Response, Response, NodeFetchRequestConfig>(
         {
           config: {
             url: "http://example.com/data",
@@ -551,11 +535,7 @@ describe("NodeFetchRequestAdapter", () => {
       });
 
       const adapter = new TestNodeFetchAdapter();
-      await RequestChain.begin<
-        Response,
-        Response,
-        NodeFetchRequestConfig
-      >(
+      await RequestChain.begin<Response, Response, NodeFetchRequestConfig>(
         {
           config: {
             url: "http://example.com/users",
@@ -591,11 +571,7 @@ describe("NodeFetchRequestAdapter", () => {
         });
 
         const adapter = new TestNodeFetchAdapter();
-        await RequestChain.begin<
-          Response,
-          Response,
-          NodeFetchRequestConfig
-        >(
+        await RequestChain.begin<Response, Response, NodeFetchRequestConfig>(
           {
             config: {
               url: "http://example.com/test",
@@ -614,4 +590,3 @@ describe("NodeFetchRequestAdapter", () => {
     });
   });
 });
-
