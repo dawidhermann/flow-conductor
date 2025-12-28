@@ -1,7 +1,7 @@
 import { RequestAdapter } from "@flow-pipe/core";
 import type { IRequestConfig, UrlValidationOptions } from "@flow-pipe/core";
 import fetch from "node-fetch";
-import type { Response } from "node-fetch";
+import type { RequestInit, Response } from "node-fetch";
 
 /**
  * Request configuration type for node-fetch adapter.
@@ -64,8 +64,10 @@ export default class NodeFetchRequestAdapter extends RequestAdapter<
         }
       } else if (typeof data === "string") {
         fetchConfig.body = data;
-      } else if (data instanceof Buffer || data instanceof Uint8Array) {
+      } else if (data instanceof Buffer) {
         fetchConfig.body = data;
+      } else if (data instanceof Uint8Array) {
+        fetchConfig.body = Buffer.from(data);
       } else {
         fetchConfig.body = JSON.stringify(data);
         // Set Content-Type header if not already set
