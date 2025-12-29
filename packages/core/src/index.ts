@@ -25,7 +25,11 @@ export type {
   ChunkProcessingConfig,
 } from "./models/request-params";
 
-export type { ErrorHandler, ResultHandler, ChunkHandler } from "./models/handlers";
+export type {
+  ErrorHandler,
+  ResultHandler,
+  ChunkHandler,
+} from "./models/handlers";
 
 // Security utilities
 export { validateUrl, SSRFError } from "./utils/url-validator";
