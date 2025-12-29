@@ -2,6 +2,8 @@
 
 import type { Response } from "node-fetch";
 
+type HeadersInit = string[][] | Record<string, string> | Headers;
+
 type NodeFetchMockResponse = {
   ok?: boolean;
   status?: number;
@@ -163,7 +165,7 @@ class NodeFetchMock {
           }),
         blob: response.blob ?? (async () => new Blob()),
         arrayBuffer: response.arrayBuffer ?? (async () => new ArrayBuffer(0)),
-      } as Response;
+      } as unknown as Response;
 
       return Promise.resolve(mockResponse);
     }
@@ -179,7 +181,7 @@ class NodeFetchMock {
       text: async () => "",
       blob: async () => new Blob(),
       arrayBuffer: async () => new ArrayBuffer(0),
-    } as Response;
+    } as unknown as Response;
 
     return Promise.resolve(defaultResponse);
   }

@@ -158,7 +158,7 @@ describe("NodeFetchRequestAdapter", () => {
         adapter
       ).execute();
 
-      const data = await result.json();
+      const data = (await result.json()) as { name: string };
       assert.strictEqual(data.name, partialUpdate.name);
       assert.ok(
         nodeFetchMockToBeCalledWith("http://example.com/users/1", {
@@ -367,16 +367,20 @@ describe("NodeFetchRequestAdapter", () => {
         adapter
       )
         .next({
-          config: (previousResult: typeof firstUser) => {
+          config: (previousResult: Response | undefined) => {
+            const user = previousResult as unknown as typeof firstUser;
             return {
-              url: `http://example.com/users/${previousResult.id}/posts`,
+              url: `http://example.com/users/${user.id}/posts`,
               method: "GET",
             };
           },
         })
         .execute();
 
-      const data = await result.json();
+      const data = (await (result as unknown as Response).json()) as Array<{
+        id: number;
+        title: string;
+      }>;
       assert.ok(Array.isArray(data));
       assert.strictEqual(data.length, 1);
     });
@@ -460,7 +464,7 @@ describe("NodeFetchRequestAdapter", () => {
 
       assert.strictEqual(result.status, 404);
       assert.strictEqual(result.ok, false);
-      const data = await result.json();
+      const data = (await result.json()) as { error: string };
       assert.strictEqual(data.error, "Not Found");
     });
   });

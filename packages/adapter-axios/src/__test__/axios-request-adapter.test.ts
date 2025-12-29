@@ -390,7 +390,7 @@ describe("AxiosRequestAdapter", () => {
         });
 
       const adapter = new TestAxiosAdapter();
-      const result = await RequestChain.begin<
+      const result = (await RequestChain.begin<
         AxiosResponse,
         AxiosResponse,
         AxiosRequestConfigType
@@ -409,7 +409,7 @@ describe("AxiosRequestAdapter", () => {
             };
           },
         })
-        .execute();
+        .execute()) as AxiosResponse;
 
       assert.ok(Array.isArray(result.data));
       assert.strictEqual(result.data.length, 1);

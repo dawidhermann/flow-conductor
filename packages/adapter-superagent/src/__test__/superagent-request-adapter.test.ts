@@ -332,8 +332,9 @@ describe("SuperagentRequestAdapter", () => {
         })
         .execute();
 
-      assert.ok(Array.isArray(result.body));
-      assert.strictEqual(result.body.length, 1);
+      const typedResult = result as Response;
+      assert.ok(Array.isArray(typedResult.body));
+      assert.strictEqual(typedResult.body.length, 1);
     });
   });
 

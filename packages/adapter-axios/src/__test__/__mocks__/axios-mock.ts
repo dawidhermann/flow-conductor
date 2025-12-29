@@ -146,6 +146,7 @@ class AxiosMock {
       }
 
       // Ensure response has all required AxiosResponse properties
+      const responseConfig = (response as AxiosResponse<T>).config || config;
       const axiosResponse: AxiosResponse<T> = {
         data:
           (response as AxiosResponse<T>).data ||
@@ -163,7 +164,10 @@ class AxiosMock {
           (response as AxiosResponse<T>).headers ||
           (response as any).headers ||
           {},
-        config: (response as AxiosResponse<T>).config || config,
+        config: {
+          ...responseConfig,
+          headers: responseConfig.headers || {},
+        } as any,
       };
 
       return Promise.resolve(axiosResponse);
@@ -175,7 +179,10 @@ class AxiosMock {
       status: 200,
       statusText: "OK",
       headers: {},
-      config,
+      config: {
+        ...config,
+        headers: config.headers || {},
+      } as any,
     });
   }
 

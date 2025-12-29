@@ -37,7 +37,7 @@ export default abstract class RequestFlow<
   /**
    * Optional finish handler callback executed after completion
    */
-  protected finishHandler?: VoidFunction;
+  protected finishHandler?: () => void;
   /**
    * The request adapter used to execute HTTP requests
    */
@@ -113,7 +113,7 @@ export default abstract class RequestFlow<
    * @returns The current RequestFlow instance for method chaining
    */
   public withFinishHandler(
-    finishHandler: VoidFunction
+    finishHandler: () => void
   ): RequestFlow<Out, AdapterExecutionResult, RequestConfig> {
     this.finishHandler = finishHandler;
     return this;

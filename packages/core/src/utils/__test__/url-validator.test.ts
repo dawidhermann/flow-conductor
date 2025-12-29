@@ -36,7 +36,7 @@ describe("URL Validator", () => {
           validateUrl("file:///etc/passwd");
         },
         SSRFError,
-        /Protocol "file:" is not allowed/
+        /Protocol "file:" is not allowed/ as unknown as string
       );
     });
 
@@ -46,7 +46,7 @@ describe("URL Validator", () => {
           validateUrl("ftp://example.com");
         },
         SSRFError,
-        /Protocol "ftp:" is not allowed/
+        /Protocol "ftp:" is not allowed/ as unknown as string
       );
     });
 
@@ -66,7 +66,7 @@ describe("URL Validator", () => {
           validateUrl("http://localhost:3000");
         },
         SSRFError,
-        /Localhost addresses are not allowed/
+        /Localhost addresses are not allowed/ as unknown as string
       );
     });
 
@@ -76,7 +76,7 @@ describe("URL Validator", () => {
           validateUrl("http://127.0.0.1:3000");
         },
         SSRFError,
-        /Localhost addresses are not allowed/
+        /Localhost addresses are not allowed/ as unknown as string
       );
     });
 
@@ -86,7 +86,7 @@ describe("URL Validator", () => {
           validateUrl("http://[::1]:3000");
         },
         SSRFError,
-        /Localhost addresses are not allowed/
+        /Localhost addresses are not allowed/ as unknown as string
       );
     });
 
@@ -106,7 +106,7 @@ describe("URL Validator", () => {
           validateUrl("http://10.0.0.1");
         },
         SSRFError,
-        /Private IP addresses \(10\.x\.x\.x\)/
+        /Private IP addresses \(10\.x\.x\.x\)/ as unknown as string
       );
     });
 
@@ -116,7 +116,7 @@ describe("URL Validator", () => {
           validateUrl("http://172.16.0.1");
         },
         SSRFError,
-        /Private IP addresses \(172\.16-31\.x\.x\)/
+        /Private IP addresses \(172\.16-31\.x\.x\)/ as unknown as string
       );
     });
 
@@ -126,7 +126,7 @@ describe("URL Validator", () => {
           validateUrl("http://192.168.1.1");
         },
         SSRFError,
-        /Private IP addresses \(192\.168\.x\.x\)/
+        /Private IP addresses \(192\.168\.x\.x\)/ as unknown as string
       );
     });
 
@@ -136,7 +136,7 @@ describe("URL Validator", () => {
           validateUrl("http://169.254.0.1");
         },
         SSRFError,
-        /Link-local addresses/
+        /Link-local addresses/ as unknown as string
       );
     });
 
@@ -156,7 +156,7 @@ describe("URL Validator", () => {
           validateUrl("not-a-url");
         },
         SSRFError,
-        /Invalid URL format/
+        /Invalid URL format/ as unknown as string
       );
     });
 
@@ -166,7 +166,7 @@ describe("URL Validator", () => {
           validateUrl("");
         },
         SSRFError,
-        /URL must be a non-empty string/
+        /URL must be a non-empty string/ as unknown as string
       );
     });
 
@@ -176,7 +176,7 @@ describe("URL Validator", () => {
           validateUrl(null as unknown as string);
         },
         SSRFError,
-        /URL must be a non-empty string/
+        /URL must be a non-empty string/ as unknown as string
       );
     });
   });
