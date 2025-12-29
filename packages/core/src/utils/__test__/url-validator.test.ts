@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import * as assert from "node:assert";
-import { validateUrl, SSRFError } from "../urlValidator";
+import { validateUrl, SSRFError } from "../url-validator";
 
 describe("URL Validator", () => {
   describe("Valid URLs", () => {
@@ -199,4 +199,3 @@ describe("URL Validator", () => {
     });
   });
 });
-

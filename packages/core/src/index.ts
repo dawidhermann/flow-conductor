@@ -1,18 +1,18 @@
 /**
  * @packageDocumentation
  * @module @request-orchestrator/core
- * 
+ *
  * Request-Orchestrator Core Package
- * 
+ *
  * A flexible request pipeline library for building sequential HTTP request chains
  * with support for conditional execution, result mapping, and error handling.
  */
 
 // Main exports
-export { default as RequestAdapter } from "./RequestAdapter";
-export { default as RequestManager } from "./RequestManager";
-export { default as RequestChain, begin } from "./RequestChain";
-export { default } from "./RequestChain";
+export { default as RequestAdapter } from "./request-adapter";
+export { default as RequestManager } from "./request-manager";
+export { default as RequestChain, begin } from "./request-chain";
+export { default } from "./request-chain";
 
 // Types
 export type {
@@ -22,13 +22,13 @@ export type {
   PipelineManagerStage,
   BasePipelineStage,
   RetryConfig,
-} from "./models/RequestParams";
+} from "./models/request-params";
 
-export type { ErrorHandler, ResultHandler } from "./models/Handlers";
+export type { ErrorHandler, ResultHandler } from "./models/handlers";
 
 // Security utilities
-export { validateUrl, SSRFError } from "./utils/urlValidator";
-export type { UrlValidationOptions } from "./utils/urlValidator";
+export { validateUrl, SSRFError } from "./utils/url-validator";
+export type { UrlValidationOptions } from "./utils/url-validator";
 
 // Retry utilities
 export {
@@ -37,5 +37,4 @@ export {
   defaultRetryCondition,
   retryOnStatusCodes,
   retryOnNetworkOrStatusCodes,
-} from "./utils/retryUtils";
-
+} from "./utils/retry-utils";

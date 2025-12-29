@@ -2,13 +2,13 @@ import { describe, test, beforeEach } from "node:test";
 import * as assert from "node:assert";
 import { RequestChain } from "@request-orchestrator/core";
 import type { Response } from "node-fetch";
-import type { NodeFetchRequestConfig } from "../NodeFetchRequestAdapter";
-import TestNodeFetchAdapter from "./__mocks__/TestNodeFetchAdapter";
+import type { NodeFetchRequestConfig } from "../node-fetch-request-adapter";
+import TestNodeFetchAdapter from "./__mocks__/test-node-fetch-adapter";
 import nodeFetchMock, {
   resetNodeFetchMock,
   nodeFetchMockToBeCalledWith,
   getNodeFetchCalls,
-} from "./__mocks__/nodeFetchMock";
+} from "./__mocks__/node-fetch-mock";
 
 const firstUser = { id: 1, name: "John Smith" };
 const secondUser = { id: 2, name: "Bruce Wayne" };

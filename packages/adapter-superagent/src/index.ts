@@ -9,5 +9,5 @@
  * and plugin ecosystem.
  */
 
-export { default, SuperagentRequestConfig } from "./SuperagentRequestAdapter";
+export { default, SuperagentRequestConfig } from "./superagent-request-adapter";
 

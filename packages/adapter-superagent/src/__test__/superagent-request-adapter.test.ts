@@ -2,13 +2,13 @@ import { describe, test, beforeEach } from "node:test";
 import * as assert from "node:assert";
 import { RequestChain } from "@request-orchestrator/core";
 import type { Response } from "superagent";
-import type { SuperagentRequestConfig } from "../SuperagentRequestAdapter";
-import TestSuperagentAdapter from "./__mocks__/TestSuperagentAdapter";
+import type { SuperagentRequestConfig } from "../superagent-request-adapter";
+import TestSuperagentAdapter from "./__mocks__/test-superagent-adapter";
 import superagentMock, {
   resetSuperagentMock,
   superagentMockToBeCalledWith,
   getSuperagentCalls,
-} from "./__mocks__/superagentMock";
+} from "./__mocks__/superagent-mock";
 
 const firstUser = { id: 1, name: "John Smith" };
 const secondUser = { id: 2, name: "Bruce Wayne" };

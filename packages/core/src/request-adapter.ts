@@ -1,5 +1,5 @@
-import type { IRequestConfig } from "./models/RequestParams";
-import { validateUrl, type UrlValidationOptions } from "./utils/urlValidator";
+import type { IRequestConfig } from "./models/request-params";
+import { validateUrl, type UrlValidationOptions } from "./utils/url-validator";
 
 /**
  * Abstract base class for request adapters that handle HTTP requests.

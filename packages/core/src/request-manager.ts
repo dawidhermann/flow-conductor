@@ -1,10 +1,10 @@
-import type RequestAdapter from "./RequestAdapter";
+import type RequestAdapter from "./request-adapter";
 import type {
   PipelineManagerStage,
   PipelineRequestStage,
-} from "./models/RequestParams";
-import type { ErrorHandler, ResultHandler } from "./models/Handlers";
-import type { IRequestConfig } from "./models/RequestParams";
+} from "./models/request-params";
+import type { ErrorHandler, ResultHandler } from "./models/handlers";
+import type { IRequestConfig } from "./models/request-params";
 
 /**
  * Abstract base class for managing request pipelines and flows.

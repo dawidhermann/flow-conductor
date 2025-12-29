@@ -1,5 +1,5 @@
 // Setup file for Node.js test runner - mocks superagent
-import { mockSuperagent } from "./__mocks__/superagentMock";
+import { mockSuperagent } from "./__mocks__/superagent-mock";
 
 // Mock superagent module before any imports
 // This needs to be done via dynamic import or by modifying the adapter to accept superagent instance

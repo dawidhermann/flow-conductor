@@ -1,4 +1,4 @@
-import type RequestFlow from "../RequestManager";
+import type RequestFlow from "../request-manager";
 
 /**
  * Supported HTTP methods for requests

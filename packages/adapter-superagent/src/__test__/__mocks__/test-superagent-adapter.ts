@@ -1,8 +1,8 @@
 import { RequestAdapter } from "@request-orchestrator/core";
 import type { IRequestConfig } from "@request-orchestrator/core";
 import type { Response } from "superagent";
-import { mockSuperagent } from "./superagentMock";
-import type { SuperagentRequestConfig } from "../../SuperagentRequestAdapter";
+import { mockSuperagent } from "./superagent-mock";
+import type { SuperagentRequestConfig } from "../../superagent-request-adapter";
 
 export default class TestSuperagentAdapter extends RequestAdapter<
   Response,

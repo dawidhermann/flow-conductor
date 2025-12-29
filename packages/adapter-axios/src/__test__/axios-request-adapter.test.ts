@@ -2,13 +2,13 @@ import { describe, test, beforeEach } from "node:test";
 import * as assert from "node:assert";
 import { RequestChain } from "@request-orchestrator/core";
 import type { AxiosResponse } from "axios";
-import type { AxiosRequestConfigType } from "../AxiosRequestAdapter";
-import TestAxiosAdapter from "./__mocks__/TestAxiosAdapter";
+import type { AxiosRequestConfigType } from "../axios-request-adapter";
+import TestAxiosAdapter from "./__mocks__/test-axios-adapter";
 import axiosMock, {
   resetAxiosMock,
   axiosMockToBeCalledWith,
   getAxiosCalls,
-} from "./__mocks__/axiosMock";
+} from "./__mocks__/axios-mock";
 
 const firstUser = { id: 1, name: "John Smith" };
 const secondUser = { id: 2, name: "Bruce Wayne" };

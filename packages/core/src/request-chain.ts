@@ -1,12 +1,12 @@
-import type RequestAdapter from "./RequestAdapter";
-import RequestFlow from "./RequestManager";
+import type RequestAdapter from "./request-adapter";
+import RequestFlow from "./request-manager";
 import type {
   IRequestConfig,
   PipelineRequestStage,
   PipelineManagerStage,
   RetryConfig,
-} from "./models/RequestParams";
-import { defaultRetryCondition } from "./utils/retryUtils";
+} from "./models/request-params";
+import { defaultRetryCondition } from "./utils/retry-utils";
 
 /**
  * A chainable request pipeline that allows sequential execution of HTTP requests.

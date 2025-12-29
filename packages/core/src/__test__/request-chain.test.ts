@@ -1,13 +1,13 @@
 import { describe, test } from "node:test";
 import * as assert from "node:assert";
-import RequestChain, { begin } from "../RequestChain";
+import RequestChain, { begin } from "../request-chain";
 import type { ResultHandler, IRequestConfig } from "../index";
-import type RequestAdapter from "../RequestAdapter";
+import type RequestAdapter from "../request-adapter";
 import fetchMock, {
   resetFetchMock,
   fetchMockToBeCalledWith,
-} from "./__mocks__/fetchMock";
-import TestAdapter from "./__mocks__/TestAdapter";
+} from "./__mocks__/fetch-mock";
+import TestAdapter from "./__mocks__/test-adapter";
 
 const firstUser = { id: 1, name: "John Smith" };
 const secondUser = { id: 2, name: "Bruce Wayne" };

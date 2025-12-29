@@ -1,16 +1,16 @@
 import { describe, test } from "node:test";
 import * as assert from "node:assert";
-import RequestChain from "../RequestChain";
+import RequestChain from "../request-chain";
 import type { IRequestConfig } from "../index";
 import fetchMock, {
   resetFetchMock,
   getFetchCalls,
-} from "./__mocks__/fetchMock";
-import TestAdapter from "./__mocks__/TestAdapter";
+} from "./__mocks__/fetch-mock";
+import TestAdapter from "./__mocks__/test-adapter";
 import {
   retryOnStatusCodes,
   retryOnNetworkOrStatusCodes,
-} from "../utils/retryUtils";
+} from "../utils/retry-utils";
 
 // Extended request result type based on actual usage in tests
 interface TestRequestResult<T> {

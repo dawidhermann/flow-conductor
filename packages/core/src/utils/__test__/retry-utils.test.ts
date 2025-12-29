@@ -6,7 +6,7 @@ import {
   defaultRetryCondition,
   retryOnStatusCodes,
   retryOnNetworkOrStatusCodes,
-} from "../retryUtils";
+} from "../retry-utils";
 
 describe("retryUtils", () => {
   describe("getErrorStatus", () => {
