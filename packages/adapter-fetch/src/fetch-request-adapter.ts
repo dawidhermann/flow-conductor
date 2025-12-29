@@ -1,5 +1,8 @@
 import { RequestAdapter } from "@request-orchestrator/core";
-import type { IRequestConfig, UrlValidationOptions } from "@request-orchestrator/core";
+import type {
+  IRequestConfig,
+  UrlValidationOptions,
+} from "@request-orchestrator/core";
 
 /**
  * Request configuration type for Fetch adapter.
@@ -46,8 +49,8 @@ export default class FetchRequestAdapter extends RequestAdapter<
     if (data) {
       fetchConfig.body = typeof data === "string" ? data : JSON.stringify(data);
       fetchConfig.headers = {
-        ...(fetchConfig.headers as Record<string, string>),
         "Content-Type": "application/json",
+        ...(fetchConfig.headers as Record<string, string>),
       };
     }
     return fetch(url, fetchConfig);
