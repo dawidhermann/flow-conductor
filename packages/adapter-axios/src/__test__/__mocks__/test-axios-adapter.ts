@@ -1,5 +1,4 @@
 import { RequestAdapter } from "@request-orchestrator/core";
-import type { IRequestConfig } from "@request-orchestrator/core";
 import type { AxiosRequestConfig, AxiosResponse } from "axios";
 import { mockAxios } from "./axios-mock";
 import type { AxiosRequestConfigType } from "../../axios-request-adapter";

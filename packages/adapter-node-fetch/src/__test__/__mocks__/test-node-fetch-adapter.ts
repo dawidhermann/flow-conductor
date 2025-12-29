@@ -1,5 +1,4 @@
 import { RequestAdapter } from "@request-orchestrator/core";
-import type { IRequestConfig } from "@request-orchestrator/core";
 import type { Response } from "node-fetch";
 import { mockNodeFetch } from "./node-fetch-mock";
 import type { NodeFetchRequestConfig } from "../../node-fetch-request-adapter";
