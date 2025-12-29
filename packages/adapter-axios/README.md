@@ -1,20 +1,20 @@
-# @flow-pipe/adapter-axios
+# @request-orchestrator/adapter-axios
 
-Axios adapter for flow-pipe. This adapter uses Axios for making HTTP requests, providing features like request/response interceptors, automatic JSON parsing, and better error handling.
+Axios adapter for request-orchestrator. This adapter uses Axios for making HTTP requests, providing features like request/response interceptors, automatic JSON parsing, and better error handling.
 
 ## Installation
 
 ```bash
-npm install @flow-pipe/adapter-axios @flow-pipe/core axios
+npm install @request-orchestrator/adapter-axios @request-orchestrator/core axios
 ```
 
-**Note**: Both `@flow-pipe/core` and `axios` are peer dependencies and must be installed alongside this package.
+**Note**: Both `@request-orchestrator/core` and `axios` are peer dependencies and must be installed alongside this package.
 
 ## Quick Start
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { AxiosRequestAdapter } from "@flow-pipe/adapter-axios";
+import { RequestChain } from "@request-orchestrator/core";
+import { AxiosRequestAdapter } from "@request-orchestrator/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
 
@@ -38,8 +38,8 @@ console.log(result.headers); // Response headers
 ### Basic GET Request
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { AxiosRequestAdapter } from "@flow-pipe/adapter-axios";
+import { RequestChain } from "@request-orchestrator/core";
+import { AxiosRequestAdapter } from "@request-orchestrator/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
 
@@ -60,8 +60,8 @@ console.log(user);
 ### POST Request with Data
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { AxiosRequestAdapter } from "@flow-pipe/adapter-axios";
+import { RequestChain } from "@request-orchestrator/core";
+import { AxiosRequestAdapter } from "@request-orchestrator/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
 
@@ -86,8 +86,8 @@ console.log(newUser);
 ### Request with Custom Headers
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { AxiosRequestAdapter } from "@flow-pipe/adapter-axios";
+import { RequestChain } from "@request-orchestrator/core";
+import { AxiosRequestAdapter } from "@request-orchestrator/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
 
@@ -109,8 +109,8 @@ const result = await RequestChain.begin(
 ### Chained Requests
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { AxiosRequestAdapter } from "@flow-pipe/adapter-axios";
+import { RequestChain } from "@request-orchestrator/core";
+import { AxiosRequestAdapter } from "@request-orchestrator/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
 
@@ -254,7 +254,7 @@ You can create a custom Axios instance with default configuration:
 
 ```typescript
 import axios from "axios";
-import { AxiosRequestAdapter } from "@flow-pipe/adapter-axios";
+import { AxiosRequestAdapter } from "@request-orchestrator/adapter-axios";
 
 // Create a custom axios instance
 const axiosInstance = axios.create({
@@ -317,8 +317,8 @@ console.log(user.name);
 Axios throws errors for HTTP error statuses (4xx, 5xx), making error handling more straightforward:
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { AxiosRequestAdapter } from "@flow-pipe/adapter-axios";
+import { RequestChain } from "@request-orchestrator/core";
+import { AxiosRequestAdapter } from "@request-orchestrator/adapter-axios";
 import { AxiosError } from "axios";
 
 const adapter = new AxiosRequestAdapter();
@@ -392,8 +392,8 @@ try {
 ### Authentication Flow
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { AxiosRequestAdapter } from "@flow-pipe/adapter-axios";
+import { RequestChain } from "@request-orchestrator/core";
+import { AxiosRequestAdapter } from "@request-orchestrator/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
 
@@ -427,8 +427,8 @@ console.log(profile);
 ### File Upload
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { AxiosRequestAdapter } from "@flow-pipe/adapter-axios";
+import { RequestChain } from "@request-orchestrator/core";
+import { AxiosRequestAdapter } from "@request-orchestrator/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
 
@@ -516,7 +516,7 @@ Extends `IRequestConfig` with all Axios configuration options.
 
 ## Requirements
 
-- `@flow-pipe/core` (peer dependency)
+- `@request-orchestrator/core` (peer dependency)
 - `axios` ^1.0.0 (peer dependency)
 - Node.js 18+
 - TypeScript 5.0+

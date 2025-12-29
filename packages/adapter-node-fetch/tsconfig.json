@@ -17,7 +17,7 @@
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
 		"paths": {
-			"@flow-pipe/core": ["../core/src/index.ts"]
+			"@request-orchestrator/core": ["../core/src/index.ts"]
 		}
 	},
 	"include": ["./src/**/*"],

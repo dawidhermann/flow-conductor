@@ -1,6 +1,6 @@
 # Creating a New Adapter Package
 
-This guide will help you create a new adapter package for flow-pipe.
+This guide will help you create a new adapter package for request-orchestrator.
 
 ## Package Structure
 
@@ -20,10 +20,10 @@ packages/adapter-{name}/
 
 ```json
 {
-  "name": "@flow-pipe/adapter-{name}",
+  "name": "@request-orchestrator/adapter-{name}",
   "version": "1.0.0",
   "type": "module",
-  "description": "{Description} adapter for flow-pipe",
+  "description": "{Description} adapter for request-orchestrator",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
   "exports": {
@@ -40,7 +40,7 @@ packages/adapter-{name}/
     "LICENSE"
   ],
   "keywords": [
-    "flow-pipe",
+    "request-orchestrator",
     "request",
     "adapter",
     "{name}",
@@ -58,7 +58,7 @@ packages/adapter-{name}/
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dawidhermann/flow-pipe.git",
+    "url": "https://github.com/dawidhermann/request-orchestrator.git",
     "directory": "packages/adapter-{name}"
   },
   "sideEffects": false,
@@ -66,11 +66,11 @@ packages/adapter-{name}/
     "node": ">=18.0.0"
   },
   "peerDependencies": {
-    "@flow-pipe/core": "^1.0.0"
+    "@request-orchestrator/core": "^1.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
-    "@flow-pipe/core": "workspace:*",
+    "@request-orchestrator/core": "workspace:*",
     "@typescript-eslint/eslint-plugin": "^8.50.1",
     "@typescript-eslint/parser": "^8.50.1",
     "eslint": "^9.39.2",
@@ -116,8 +116,8 @@ packages/adapter-{name}/
 Create `src/{Name}RequestAdapter.ts`:
 
 ```typescript
-import { RequestAdapter } from "@flow-pipe/core";
-import type { IRequestConfig } from "@flow-pipe/core";
+import { RequestAdapter } from "@request-orchestrator/core";
+import type { IRequestConfig } from "@request-orchestrator/core";
 
 export type {Name}RequestConfig = IRequestConfig & {
   // Add any custom configuration options here
@@ -146,17 +146,17 @@ export { default, {Name}RequestConfig } from "./{Name}RequestAdapter";
 
 ## Step 5: Add to Root Workspace
 
-The package will be automatically included if it's in the `packages/` directory and has a valid `package.json` with a name starting with `@flow-pipe/`.
+The package will be automatically included if it's in the `packages/` directory and has a valid `package.json` with a name starting with `@request-orchestrator/`.
 
 ## Step 6: Update Root Exports (Optional)
 
-If you want to export the adapter from the main `flow-pipe` package, add it to `src/index.ts`:
+If you want to export the adapter from the main `request-orchestrator` package, add it to `src/index.ts`:
 
 ```typescript
 export {
   default as {Name}RequestAdapter,
   {Name}RequestConfig,
-} from "@flow-pipe/adapter-{name}";
+} from "@request-orchestrator/adapter-{name}";
 ```
 
 ## Publishing
@@ -171,5 +171,5 @@ npm publish
 Make sure to:
 1. Update the version number
 2. Run `npm run prepublishOnly` to build and verify
-3. Ensure `@flow-pipe/core` is listed as a peer dependency
+3. Ensure `@request-orchestrator/core` is listed as a peer dependency
 

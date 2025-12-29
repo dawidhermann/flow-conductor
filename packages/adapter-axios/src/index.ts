@@ -1,10 +1,10 @@
 /**
  * @packageDocumentation
- * @module @flow-pipe/adapter-axios
+ * @module @request-orchestrator/adapter-axios
  * 
- * Flow-Pipe Axios Adapter Package
+ * Request-Orchestrator Axios Adapter Package
  * 
- * Provides an Axios-based request adapter for flow-pipe.
+ * Provides an Axios-based request adapter for request-orchestrator.
  * Use this adapter when you want to leverage Axios features like interceptors,
  * automatic request/response transformation, and request cancellation.
  */

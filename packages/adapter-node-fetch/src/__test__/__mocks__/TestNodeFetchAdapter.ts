@@ -1,5 +1,5 @@
-import { RequestAdapter } from "@flow-pipe/core";
-import type { IRequestConfig } from "@flow-pipe/core";
+import { RequestAdapter } from "@request-orchestrator/core";
+import type { IRequestConfig } from "@request-orchestrator/core";
 import type { Response } from "node-fetch";
 import { mockNodeFetch } from "./nodeFetchMock";
 import type { NodeFetchRequestConfig } from "../../NodeFetchRequestAdapter";

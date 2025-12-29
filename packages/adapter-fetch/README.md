@@ -1,20 +1,20 @@
-# @flow-pipe/adapter-fetch
+# @request-orchestrator/adapter-fetch
 
-Fetch API adapter for flow-pipe. This adapter uses the native Fetch API available in Node.js 18+ and modern browsers.
+Fetch API adapter for request-orchestrator. This adapter uses the native Fetch API available in Node.js 18+ and modern browsers.
 
 ## Installation
 
 ```bash
-npm install @flow-pipe/adapter-fetch @flow-pipe/core
+npm install @request-orchestrator/adapter-fetch @request-orchestrator/core
 ```
 
-**Note**: `@flow-pipe/core` is a peer dependency and must be installed alongside this package.
+**Note**: `@request-orchestrator/core` is a peer dependency and must be installed alongside this package.
 
 ## Quick Start
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { FetchRequestAdapter } from "@flow-pipe/adapter-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { FetchRequestAdapter } from "@request-orchestrator/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
@@ -37,8 +37,8 @@ console.log(data);
 ### Basic GET Request
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { FetchRequestAdapter } from "@flow-pipe/adapter-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { FetchRequestAdapter } from "@request-orchestrator/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
@@ -59,8 +59,8 @@ console.log(user);
 ### POST Request with Data
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { FetchRequestAdapter } from "@flow-pipe/adapter-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { FetchRequestAdapter } from "@request-orchestrator/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
@@ -85,8 +85,8 @@ console.log(newUser);
 ### Request with Custom Headers
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { FetchRequestAdapter } from "@flow-pipe/adapter-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { FetchRequestAdapter } from "@request-orchestrator/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
@@ -108,8 +108,8 @@ const result = await RequestChain.begin(
 ### Chained Requests
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { FetchRequestAdapter } from "@flow-pipe/adapter-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { FetchRequestAdapter } from "@request-orchestrator/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
@@ -271,8 +271,8 @@ console.log(result.headers); // Headers object
 The Fetch API only rejects on network errors, not HTTP error statuses. You may want to check the response status:
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { FetchRequestAdapter } from "@flow-pipe/adapter-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { FetchRequestAdapter } from "@request-orchestrator/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
@@ -310,7 +310,7 @@ The Fetch API is natively available in modern browsers. No additional setup need
 
 ```typescript
 // Works in browsers with native fetch support
-import { FetchRequestAdapter } from "@flow-pipe/adapter-fetch";
+import { FetchRequestAdapter } from "@request-orchestrator/adapter-fetch";
 const adapter = new FetchRequestAdapter();
 ```
 
@@ -320,12 +320,12 @@ Node.js 18+ includes native Fetch API support. For older versions, you may need 
 
 ```typescript
 // Node.js 18+
-import { FetchRequestAdapter } from "@flow-pipe/adapter-fetch";
+import { FetchRequestAdapter } from "@request-orchestrator/adapter-fetch";
 const adapter = new FetchRequestAdapter();
 
 // Node.js < 18 (requires polyfill)
 import fetch from "node-fetch";
-import { FetchRequestAdapter } from "@flow-pipe/adapter-fetch";
+import { FetchRequestAdapter } from "@request-orchestrator/adapter-fetch";
 
 // Note: You may need to configure the adapter to use the polyfill
 // or use a different adapter implementation
@@ -336,8 +336,8 @@ import { FetchRequestAdapter } from "@flow-pipe/adapter-fetch";
 ### Authentication Flow
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { FetchRequestAdapter } from "@flow-pipe/adapter-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { FetchRequestAdapter } from "@request-orchestrator/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
@@ -371,8 +371,8 @@ console.log(profile);
 ### File Upload
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { FetchRequestAdapter } from "@flow-pipe/adapter-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { FetchRequestAdapter } from "@request-orchestrator/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
@@ -413,7 +413,7 @@ Extends `IRequestConfig` with all standard Fetch API options.
 
 ## Requirements
 
-- `@flow-pipe/core` (peer dependency)
+- `@request-orchestrator/core` (peer dependency)
 - Node.js 18+ (for native Fetch API) or a Fetch polyfill
 - TypeScript 5.0+
 

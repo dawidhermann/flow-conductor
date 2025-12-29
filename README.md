@@ -1,20 +1,20 @@
-# flow-pipe
+# request-orchestrator
 
-A powerful TypeScript library for creating and managing request chains. Flow-pipe allows you to chain multiple HTTP requests together, transform results, and handle responses with ease.
+A powerful TypeScript library for creating and managing request chains. Request-orchestrator allows you to chain multiple HTTP requests together, transform results, and handle responses with ease.
 
 ## TL;DR
 
-**flow-pipe** is **not** a new library for API calls—it's a **wrapper** that helps orchestrate complex REST data flows. Built with TypeScript-first design, flow-pipe wraps your existing HTTP libraries (Fetch, Axios, Superagent, etc.) to simplify chaining multiple requests together. Each request in the chain can access and use results from previous requests, making it perfect for authentication flows, data aggregation, and sequential API orchestration.
+**request-orchestrator** is **not** a new library for API calls—it's a **wrapper** that helps orchestrate complex REST data flows. Built with TypeScript-first design, request-orchestrator wraps your existing HTTP libraries (Fetch, Axios, Superagent, etc.) to simplify chaining multiple requests together. Each request in the chain can access and use results from previous requests, making it perfect for authentication flows, data aggregation, and sequential API orchestration.
 
 **Best suited for:** Backend services and CLI applications where sequential API calls are common. Can also be used in frontend applications for complex data fetching scenarios.
 
 ### Core Concept
 
-Instead of nested callbacks or complex Promise chains, flow-pipe provides a fluent API to chain requests:
+Instead of nested callbacks or complex Promise chains, request-orchestrator provides a fluent API to chain requests:
 
 ```typescript
-import { RequestChain } from 'flow-pipe';
-import { FetchRequestAdapter } from 'flow-pipe/adapter-fetch';
+import { RequestChain } from 'request-orchestrator';
+import { FetchRequestAdapter } from 'request-orchestrator/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 
@@ -34,7 +34,7 @@ const result = await RequestChain.begin(
 
 ### Request Adapters
 
-flow-pipe uses a **modular adapter system** - you choose which HTTP library to use. Each adapter is a separate package:
+request-orchestrator uses a **modular adapter system** - you choose which HTTP library to use. Each adapter is a separate package:
 
 - **`FetchRequestAdapter`** - Native Fetch API (Node.js 18+, browsers) - Zero dependencies
 - **`NodeFetchRequestAdapter`** - node-fetch package (Node.js only)
@@ -43,7 +43,7 @@ flow-pipe uses a **modular adapter system** - you choose which HTTP library to u
 
 **Installation:**
 ```bash
-npm install @flow-pipe/core @flow-pipe/adapter-fetch
+npm install @request-orchestrator/core @request-orchestrator/adapter-fetch
 ```
 
 **Usage:**
@@ -161,8 +161,8 @@ const adapter = new FetchRequestAdapter({
 ### Quick Example: Authentication Flow
 
 ```typescript
-import { RequestChain } from 'flow-pipe';
-import { FetchRequestAdapter } from 'flow-pipe/adapter-fetch';
+import { RequestChain } from 'request-orchestrator';
+import { FetchRequestAdapter } from 'request-orchestrator/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 
@@ -228,7 +228,7 @@ console.log(await userData.json());
 Install the main package for core functionality. **Note**: Adapters are NOT included in the main export and must be imported separately using subpath exports or individual packages.
 
 ```bash
-npm install flow-pipe
+npm install request-orchestrator
 ```
 
 ### Individual Packages (Modular Installation)
@@ -237,13 +237,13 @@ You can install packages individually:
 
 ```bash
 # Core package (required)
-npm install @flow-pipe/core
+npm install @request-orchestrator/core
 
 # Choose your adapter (install only what you need):
-npm install @flow-pipe/adapter-fetch         # Native Fetch API (Node.js 18+ / browsers)
-npm install @flow-pipe/adapter-node-fetch    # node-fetch adapter (Node.js only)
-npm install @flow-pipe/adapter-axios         # Axios adapter
-npm install @flow-pipe/adapter-superagent    # Superagent adapter
+npm install @request-orchestrator/adapter-fetch         # Native Fetch API (Node.js 18+ / browsers)
+npm install @request-orchestrator/adapter-node-fetch    # node-fetch adapter (Node.js only)
+npm install @request-orchestrator/adapter-axios         # Axios adapter
+npm install @request-orchestrator/adapter-superagent    # Superagent adapter
 ```
 
 **Benefits of modular installation:**
@@ -257,12 +257,12 @@ Here's a minimal example to get you started:
 
 ```typescript
 // Option 1: Using the main package with subpath exports
-import { RequestChain } from 'flow-pipe';
-import { FetchRequestAdapter } from 'flow-pipe/adapter-fetch';
+import { RequestChain } from 'request-orchestrator';
+import { FetchRequestAdapter } from 'request-orchestrator/adapter-fetch';
 
 // Option 2: Using individual packages
-// import { RequestChain } from '@flow-pipe/core';
-// import { FetchRequestAdapter } from '@flow-pipe/adapter-fetch';
+// import { RequestChain } from '@request-orchestrator/core';
+// import { FetchRequestAdapter } from '@request-orchestrator/adapter-fetch';
 
 // Create a simple GET request chain
 const adapter = new FetchRequestAdapter();
@@ -291,7 +291,7 @@ console.log(await result.json()); // User data
 You can start a request chain using either `RequestChain.begin()` or the exported `begin()` function:
 
 ```typescript
-import { RequestChain, begin, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, begin, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -320,7 +320,7 @@ console.log(await result2.json()); // Response data
 Chain multiple requests together. Each request can use the result from the previous one:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -363,7 +363,7 @@ console.log(comments);
 Each `.next()` call receives the result from the previous request, allowing you to build dynamic request chains:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -409,7 +409,7 @@ console.log(settings);
 Transform request results using mapper functions. Mapped results are then available to subsequent requests:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -452,7 +452,7 @@ Result interceptors allow you to perform side effects or additional processing o
 #### Basic Result Interceptor
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -604,7 +604,7 @@ const result = await RequestChain.begin(
 All HTTP methods are supported:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -655,7 +655,7 @@ Handlers allow you to react to different stages of request execution.
 Handle successful results:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -677,7 +677,7 @@ await RequestChain.begin(
 Handle errors gracefully:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -702,7 +702,7 @@ await RequestChain.begin(
 Execute code after request completion (success or failure):
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -732,7 +732,7 @@ await RequestChain.begin(
 Use multiple handlers together:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -760,14 +760,14 @@ await RequestChain.begin(
 
 ### Retry Mechanism
 
-flow-pipe includes a powerful retry mechanism that automatically retries failed requests based on configurable conditions. This is especially useful for handling transient network errors or temporary server issues.
+request-orchestrator includes a powerful retry mechanism that automatically retries failed requests based on configurable conditions. This is especially useful for handling transient network errors or temporary server issues.
 
 #### Basic Retry Configuration
 
 Retry failed requests with default settings (retries on network errors):
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -787,7 +787,7 @@ const result = await RequestChain.begin(
 Retry on specific HTTP status codes (e.g., 5xx server errors or 429 rate limits):
 
 ```typescript
-import { RequestChain, FetchRequestAdapter, retryOnStatusCodes } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter, retryOnStatusCodes } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -808,7 +808,7 @@ const result = await RequestChain.begin(
 Retry on both network errors and specific HTTP status codes:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter, retryOnNetworkOrStatusCodes } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter, retryOnNetworkOrStatusCodes } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -829,7 +829,7 @@ const result = await RequestChain.begin(
 Define custom logic for when to retry:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter, getErrorStatus } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter, getErrorStatus } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -925,7 +925,7 @@ The `retry` configuration object supports the following options:
 
 #### Retry Helpers
 
-flow-pipe provides helper functions for common retry scenarios:
+request-orchestrator provides helper functions for common retry scenarios:
 
 - **`retryOnStatusCodes(...codes: number[])`**: Creates a retry condition that retries on specific HTTP status codes
 - **`retryOnNetworkOrStatusCodes(...codes: number[])`**: Creates a retry condition that retries on network errors OR specific status codes
@@ -946,7 +946,7 @@ flow-pipe provides helper functions for common retry scenarios:
 Execute all requests and get all results as an array. Each step can use the previous result:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -994,7 +994,7 @@ console.log(user, posts, commentCount);
 Handle all results together. Each step builds on the previous one:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1050,7 +1050,7 @@ await RequestChain.begin(
 Handle errors when executing all requests. Each step depends on the previous:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1094,7 +1094,7 @@ await RequestChain.begin(
 Chain request managers together. Nested chains can also use previous results:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1127,7 +1127,7 @@ console.log(await result.json());
 Alternatively, using the `begin()` function:
 
 ```typescript
-import { begin, FetchRequestAdapter } from 'flow-pipe';
+import { begin, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1153,7 +1153,7 @@ const result = await begin(
 Use `addAll()` to add multiple requests to a chain:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1179,11 +1179,11 @@ const results = await chain.executeAll();
 
 ## Adapters
 
-Adapters are responsible for executing the actual HTTP requests. Flow-pipe uses a **modular adapter system** that allows you to choose the HTTP library that best fits your needs. Each adapter is a separate package.
+Adapters are responsible for executing the actual HTTP requests. Request-orchestrator uses a **modular adapter system** that allows you to choose the HTTP library that best fits your needs. Each adapter is a separate package.
 
 ### Available Adapters
 
-Flow-pipe provides three official adapters, each optimized for different use cases:
+Request-orchestrator provides three official adapters, each optimized for different use cases:
 
 #### 1. Fetch Adapter (Recommended for most cases)
 
@@ -1191,18 +1191,18 @@ The Fetch adapter uses the native Fetch API, available in Node.js 18+ and modern
 
 **Installation:**
 ```bash
-npm install @flow-pipe/adapter-fetch @flow-pipe/core
+npm install @request-orchestrator/adapter-fetch @request-orchestrator/core
 # Or install main package and use subpath exports:
-npm install flow-pipe
+npm install request-orchestrator
 ```
 
 **Usage:**
 ```typescript
-import { RequestChain } from '@flow-pipe/core';
-import { FetchRequestAdapter } from '@flow-pipe/adapter-fetch';
+import { RequestChain } from '@request-orchestrator/core';
+import { FetchRequestAdapter } from '@request-orchestrator/adapter-fetch';
 // Or using main package with subpath exports:
-// import { RequestChain } from 'flow-pipe';
-// import { FetchRequestAdapter } from 'flow-pipe/adapter-fetch';
+// import { RequestChain } from 'request-orchestrator';
+// import { FetchRequestAdapter } from 'request-orchestrator/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1255,18 +1255,18 @@ The Node-Fetch adapter uses the `node-fetch` package, making it ideal for Node.j
 
 **Installation:**
 ```bash
-npm install @flow-pipe/adapter-node-fetch @flow-pipe/core node-fetch
+npm install @request-orchestrator/adapter-node-fetch @request-orchestrator/core node-fetch
 # Or install main package and use subpath exports:
-npm install flow-pipe node-fetch
+npm install request-orchestrator node-fetch
 ```
 
 **Usage:**
 ```typescript
-import { RequestChain } from '@flow-pipe/core';
-import { NodeFetchRequestAdapter } from '@flow-pipe/adapter-node-fetch';
+import { RequestChain } from '@request-orchestrator/core';
+import { NodeFetchRequestAdapter } from '@request-orchestrator/adapter-node-fetch';
 // Or using main package with subpath exports:
-// import { RequestChain } from 'flow-pipe';
-// import { NodeFetchRequestAdapter } from 'flow-pipe/adapter-node-fetch';
+// import { RequestChain } from 'request-orchestrator';
+// import { NodeFetchRequestAdapter } from 'request-orchestrator/adapter-node-fetch';
 
 const adapter = new NodeFetchRequestAdapter();
 
@@ -1317,18 +1317,18 @@ The Axios adapter provides automatic JSON parsing, better error handling, and re
 
 **Installation:**
 ```bash
-npm install @flow-pipe/adapter-axios @flow-pipe/core axios
+npm install @request-orchestrator/adapter-axios @request-orchestrator/core axios
 # Or install main package and use subpath exports:
-npm install flow-pipe axios
+npm install request-orchestrator axios
 ```
 
 **Usage:**
 ```typescript
-import { RequestChain } from '@flow-pipe/core';
-import { AxiosRequestAdapter } from '@flow-pipe/adapter-axios';
+import { RequestChain } from '@request-orchestrator/core';
+import { AxiosRequestAdapter } from '@request-orchestrator/adapter-axios';
 // Or using main package with subpath exports:
-// import { RequestChain } from 'flow-pipe';
-// import { AxiosRequestAdapter } from 'flow-pipe/adapter-axios';
+// import { RequestChain } from 'request-orchestrator';
+// import { AxiosRequestAdapter } from 'request-orchestrator/adapter-axios';
 
 const adapter = new AxiosRequestAdapter();
 
@@ -1377,18 +1377,18 @@ The Superagent adapter offers a lightweight alternative with excellent browser a
 
 **Installation:**
 ```bash
-npm install @flow-pipe/adapter-superagent @flow-pipe/core superagent
+npm install @request-orchestrator/adapter-superagent @request-orchestrator/core superagent
 # Or install main package and use subpath exports:
-npm install flow-pipe superagent
+npm install request-orchestrator superagent
 ```
 
 **Usage:**
 ```typescript
-import { RequestChain } from '@flow-pipe/core';
-import { SuperagentRequestAdapter } from '@flow-pipe/adapter-superagent';
+import { RequestChain } from '@request-orchestrator/core';
+import { SuperagentRequestAdapter } from '@request-orchestrator/adapter-superagent';
 // Or using main package with subpath exports:
-// import { RequestChain } from 'flow-pipe';
-// import { SuperagentRequestAdapter } from 'flow-pipe/adapter-superagent';
+// import { RequestChain } from 'request-orchestrator';
+// import { SuperagentRequestAdapter } from 'request-orchestrator/adapter-superagent';
 
 const adapter = new SuperagentRequestAdapter();
 
@@ -1436,26 +1436,26 @@ You can import adapters in three ways:
 
 **Option 1: From individual packages**
 ```typescript
-import { RequestChain } from '@flow-pipe/core';
-import { FetchRequestAdapter } from '@flow-pipe/adapter-fetch';
+import { RequestChain } from '@request-orchestrator/core';
+import { FetchRequestAdapter } from '@request-orchestrator/adapter-fetch';
 ```
 
 **Option 2: Using subpath exports from main package**
 ```typescript
-import { RequestChain } from 'flow-pipe';
-import { FetchRequestAdapter } from 'flow-pipe/adapter-fetch';
+import { RequestChain } from 'request-orchestrator';
+import { FetchRequestAdapter } from 'request-orchestrator/adapter-fetch';
 ```
 
 **Option 3: Using subpath exports for all adapters**
 ```typescript
-import { RequestChain } from 'flow-pipe';
-import { FetchRequestAdapter } from 'flow-pipe/adapter-fetch';
-import { NodeFetchRequestAdapter } from 'flow-pipe/adapter-node-fetch';
-import { AxiosRequestAdapter } from 'flow-pipe/adapter-axios';
-import { SuperagentRequestAdapter } from 'flow-pipe/adapter-superagent';
+import { RequestChain } from 'request-orchestrator';
+import { FetchRequestAdapter } from 'request-orchestrator/adapter-fetch';
+import { NodeFetchRequestAdapter } from 'request-orchestrator/adapter-node-fetch';
+import { AxiosRequestAdapter } from 'request-orchestrator/adapter-axios';
+import { SuperagentRequestAdapter } from 'request-orchestrator/adapter-superagent';
 ```
 
-**Important**: The main package (`flow-pipe`) only exports core functionality. Adapters must be imported from their respective subpath exports (`flow-pipe/adapter-*`) or from individual packages (`@flow-pipe/adapter-*`).
+**Important**: The main package (`request-orchestrator`) only exports core functionality. Adapters must be imported from their respective subpath exports (`request-orchestrator/adapter-*`) or from individual packages (`@request-orchestrator/adapter-*`).
 
 ### Adapter Comparison
 
@@ -1494,9 +1494,9 @@ const result = await RequestChain.begin(
 The modular adapter system makes it easy to create custom adapters for any HTTP library. All adapters extend the base `RequestAdapter` class:
 
 ```typescript
-import { RequestAdapter, IRequestConfig } from '@flow-pipe/core';
+import { RequestAdapter, IRequestConfig } from '@request-orchestrator/core';
 // Or from the main package:
-// import { RequestAdapter, IRequestConfig } from 'flow-pipe';
+// import { RequestAdapter, IRequestConfig } from 'request-orchestrator';
 // Note: Adapters themselves must be imported from subpath exports or individual packages
 
 class CustomAdapter extends RequestAdapter<Response, IRequestConfig> {
@@ -1541,7 +1541,7 @@ For a complete guide on creating adapters, see the [adapter template](./packages
 ### Authentication Flow
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1574,7 +1574,7 @@ console.log(await userData.json());
 ### Data Aggregation
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1617,7 +1617,7 @@ console.log({ user, posts, comments });
 ### Error Recovery
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1646,7 +1646,7 @@ try {
 Handle transient failures with automatic retry and exponential backoff:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter, retryOnNetworkOrStatusCodes } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter, retryOnNetworkOrStatusCodes } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1670,7 +1670,7 @@ console.log(await result.json());
 ### Conditional Requests
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-pipe';
+import { RequestChain, FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1800,7 +1800,7 @@ interface ResultHandler<T = unknown> {
 
 ### SSRF Protection
 
-flow-pipe includes built-in protection against Server-Side Request Forgery (SSRF) attacks. All URLs are automatically validated before making requests.
+request-orchestrator includes built-in protection against Server-Side Request Forgery (SSRF) attacks. All URLs are automatically validated before making requests.
 
 #### Default Protection
 
@@ -1812,7 +1812,7 @@ By default, all adapters block potentially dangerous URLs:
 - ✅ **Validates URL format**: Ensures URLs are properly formatted
 
 ```typescript
-import { FetchRequestAdapter, SSRFError } from 'flow-pipe';
+import { FetchRequestAdapter, SSRFError } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1834,7 +1834,7 @@ try {
 For development or testing scenarios, you can configure validation:
 
 ```typescript
-import { FetchRequestAdapter, UrlValidationOptions } from 'flow-pipe';
+import { FetchRequestAdapter, UrlValidationOptions } from 'request-orchestrator';
 
 // Allow localhost for local development
 const devAdapter = new FetchRequestAdapter({
@@ -1867,12 +1867,12 @@ For more security information, see [SECURITY.md](./SECURITY.md).
 
 ### Request Timeouts
 
-**Important**: flow-pipe does **not** set default timeouts for requests. You must configure timeouts manually to prevent requests from hanging indefinitely.
+**Important**: request-orchestrator does **not** set default timeouts for requests. You must configure timeouts manually to prevent requests from hanging indefinitely.
 
 #### Fetch Adapter Timeout
 
 ```typescript
-import { FetchRequestAdapter } from 'flow-pipe';
+import { FetchRequestAdapter } from 'request-orchestrator';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1911,7 +1911,7 @@ try {
 #### Axios Adapter Timeout
 
 ```typescript
-import { AxiosRequestAdapter } from 'flow-pipe/adapter-axios';
+import { AxiosRequestAdapter } from 'request-orchestrator/adapter-axios';
 
 const adapter = new AxiosRequestAdapter();
 
@@ -1930,7 +1930,7 @@ const result = await RequestChain.begin(
 #### Superagent Adapter Timeout
 
 ```typescript
-import { SuperagentRequestAdapter } from 'flow-pipe/adapter-superagent';
+import { SuperagentRequestAdapter } from 'request-orchestrator/adapter-superagent';
 
 const adapter = new SuperagentRequestAdapter();
 
@@ -1963,10 +1963,10 @@ const result = await RequestChain.begin(
 
 ```typescript
 // Make sure you've installed the adapter:
-// npm install @flow-pipe/adapter-fetch @flow-pipe/core
+// npm install @request-orchestrator/adapter-fetch @request-orchestrator/core
 
-import { RequestChain } from '@flow-pipe/core';
-import { FetchRequestAdapter } from '@flow-pipe/adapter-fetch';
+import { RequestChain } from '@request-orchestrator/core';
+import { FetchRequestAdapter } from '@request-orchestrator/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 const result = await RequestChain.begin(
@@ -1975,7 +1975,7 @@ const result = await RequestChain.begin(
 ).execute();
 ```
 
-#### "Cannot find module '@flow-pipe/adapter-*'"
+#### "Cannot find module '@request-orchestrator/adapter-*'"
 
 **Problem**: The adapter package is not installed.
 
@@ -1983,17 +1983,17 @@ const result = await RequestChain.begin(
 
 ```bash
 # For Fetch adapter
-npm install @flow-pipe/adapter-fetch @flow-pipe/core
+npm install @request-orchestrator/adapter-fetch @request-orchestrator/core
 
 # For Axios adapter
-npm install @flow-pipe/adapter-axios @flow-pipe/core axios
+npm install @request-orchestrator/adapter-axios @request-orchestrator/core axios
 
 # For Superagent adapter
-npm install @flow-pipe/adapter-superagent @flow-pipe/core superagent
+npm install @request-orchestrator/adapter-superagent @request-orchestrator/core superagent
 
 # Or install the main package (adapters available via subpath exports)
-npm install flow-pipe
-# Then import adapters using: import { FetchRequestAdapter } from 'flow-pipe/adapter-fetch';
+npm install request-orchestrator
+# Then import adapters using: import { FetchRequestAdapter } from 'request-orchestrator/adapter-fetch';
 ```
 
 #### "Cannot read property 'body' of undefined" or Response handling differences
@@ -2056,7 +2056,7 @@ mapper: (result) => {
 
 - Check the [examples](#common-patterns) section for common use cases
 - Review the [API Reference](#api-reference) for detailed method signatures
-- Open an issue on [GitHub](https://github.com/dawidhermann/flow-pipe)
+- Open an issue on [GitHub](https://github.com/dawidhermann/request-orchestrator)
 
 ## License
 

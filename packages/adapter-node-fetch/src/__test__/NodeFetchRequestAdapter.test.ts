@@ -1,6 +1,6 @@
 import { describe, test, beforeEach } from "node:test";
 import * as assert from "node:assert";
-import { RequestChain } from "@flow-pipe/core";
+import { RequestChain } from "@request-orchestrator/core";
 import type { Response } from "node-fetch";
 import type { NodeFetchRequestConfig } from "../NodeFetchRequestAdapter";
 import TestNodeFetchAdapter from "./__mocks__/TestNodeFetchAdapter";

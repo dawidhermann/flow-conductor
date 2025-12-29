@@ -1,10 +1,10 @@
 /**
  * @packageDocumentation
- * @module @flow-pipe/adapter-fetch
+ * @module @request-orchestrator/adapter-fetch
  * 
- * Flow-Pipe Fetch Adapter Package
+ * Request-Orchestrator Fetch Adapter Package
  * 
- * Provides a Fetch API-based request adapter for flow-pipe.
+ * Provides a Fetch API-based request adapter for request-orchestrator.
  * This adapter uses the native Fetch API, making it ideal for environments
  * where you want to avoid additional dependencies.
  */

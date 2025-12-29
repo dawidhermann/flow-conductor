@@ -1,20 +1,20 @@
-# @flow-pipe/adapter-node-fetch
+# @request-orchestrator/adapter-node-fetch
 
-node-fetch adapter for flow-pipe. This adapter uses node-fetch, making it ideal for Node.js environments where you need a reliable HTTP client.
+node-fetch adapter for request-orchestrator. This adapter uses node-fetch, making it ideal for Node.js environments where you need a reliable HTTP client.
 
 ## Installation
 
 ```bash
-npm install @flow-pipe/adapter-node-fetch @flow-pipe/core node-fetch
+npm install @request-orchestrator/adapter-node-fetch @request-orchestrator/core node-fetch
 ```
 
-**Note**: `@flow-pipe/core` and `node-fetch` are peer dependencies and must be installed alongside this package.
+**Note**: `@request-orchestrator/core` and `node-fetch` are peer dependencies and must be installed alongside this package.
 
 ## Quick Start
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { NodeFetchRequestAdapter } from "@flow-pipe/adapter-node-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { NodeFetchRequestAdapter } from "@request-orchestrator/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
@@ -37,8 +37,8 @@ console.log(data);
 ### Basic GET Request
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { NodeFetchRequestAdapter } from "@flow-pipe/adapter-node-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { NodeFetchRequestAdapter } from "@request-orchestrator/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
@@ -59,8 +59,8 @@ console.log(user);
 ### POST Request with Data
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { NodeFetchRequestAdapter } from "@flow-pipe/adapter-node-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { NodeFetchRequestAdapter } from "@request-orchestrator/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
@@ -85,8 +85,8 @@ console.log(newUser);
 ### Request with Custom Headers
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { NodeFetchRequestAdapter } from "@flow-pipe/adapter-node-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { NodeFetchRequestAdapter } from "@request-orchestrator/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
@@ -108,8 +108,8 @@ const result = await RequestChain.begin(
 ### Chained Requests
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { NodeFetchRequestAdapter } from "@flow-pipe/adapter-node-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { NodeFetchRequestAdapter } from "@request-orchestrator/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
@@ -281,11 +281,11 @@ console.log(result.headers); // Headers object
 
 ## Error Handling
 
-node-fetch throws errors for network failures and rejects on HTTP error statuses (depending on configuration). You can handle errors using flow-pipe's error handling:
+node-fetch throws errors for network failures and rejects on HTTP error statuses (depending on configuration). You can handle errors using request-orchestrator's error handling:
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { NodeFetchRequestAdapter } from "@flow-pipe/adapter-node-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { NodeFetchRequestAdapter } from "@request-orchestrator/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
@@ -335,8 +335,8 @@ This adapter is specifically designed for Node.js environments and uses `node-fe
 ### Authentication Flow
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { NodeFetchRequestAdapter } from "@flow-pipe/adapter-node-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { NodeFetchRequestAdapter } from "@request-orchestrator/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
@@ -370,8 +370,8 @@ console.log(profile);
 ### File Upload
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { NodeFetchRequestAdapter } from "@flow-pipe/adapter-node-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { NodeFetchRequestAdapter } from "@request-orchestrator/adapter-node-fetch";
 import { readFileSync } from "fs";
 
 const adapter = new NodeFetchRequestAdapter();
@@ -397,8 +397,8 @@ const result = await RequestChain.begin(
 ### Request with Timeout
 
 ```typescript
-import { RequestChain } from "@flow-pipe/core";
-import { NodeFetchRequestAdapter } from "@flow-pipe/adapter-node-fetch";
+import { RequestChain } from "@request-orchestrator/core";
+import { NodeFetchRequestAdapter } from "@request-orchestrator/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
@@ -434,26 +434,26 @@ Extends `IRequestConfig` with all standard node-fetch options.
 
 ## Differences from Native Fetch Adapter
 
-The `@flow-pipe/adapter-node-fetch` adapter is similar to `@flow-pipe/adapter-fetch`, but:
+The `@request-orchestrator/adapter-node-fetch` adapter is similar to `@request-orchestrator/adapter-fetch`, but:
 
 - **Node.js only**: Designed specifically for Node.js environments
 - **node-fetch dependency**: Uses the `node-fetch` package instead of native fetch
 - **Better Node.js support**: May have better support for Node.js-specific features
 - **Consistent API**: Provides a consistent API across different Node.js versions
 
-Choose `@flow-pipe/adapter-node-fetch` if:
+Choose `@request-orchestrator/adapter-node-fetch` if:
 - You're building a Node.js-only application
 - You need features specific to node-fetch
 - You want explicit control over the fetch implementation
 
-Choose `@flow-pipe/adapter-fetch` if:
+Choose `@request-orchestrator/adapter-fetch` if:
 - You want to use the native Fetch API (Node.js 18+)
 - You want to avoid additional dependencies
 - You're building for both browser and Node.js
 
 ## Requirements
 
-- `@flow-pipe/core` (peer dependency)
+- `@request-orchestrator/core` (peer dependency)
 - `node-fetch` v3.x (peer dependency)
 - Node.js 18+ (for native ESM support)
 - TypeScript 5.0+

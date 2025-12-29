@@ -1,8 +1,8 @@
 {
-  "name": "@flow-pipe/adapter-node-fetch",
+  "name": "@request-orchestrator/adapter-node-fetch",
   "version": "1.0.0",
   "type": "module",
-  "description": "node-fetch adapter for flow-pipe",
+  "description": "node-fetch adapter for request-orchestrator",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
   "exports": {
@@ -19,7 +19,7 @@
     "LICENSE"
   ],
   "keywords": [
-    "flow-pipe",
+    "request-orchestrator",
     "request",
     "adapter",
     "node-fetch",
@@ -40,7 +40,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dawidhermann/flow-pipe.git",
+    "url": "https://github.com/dawidhermann/request-orchestrator.git",
     "directory": "packages/adapter-node-fetch"
   },
   "sideEffects": false,
@@ -48,12 +48,12 @@
     "node": ">=18.0.0"
   },
   "peerDependencies": {
-    "@flow-pipe/core": "^1.0.0",
+    "@request-orchestrator/core": "^1.0.0",
     "node-fetch": "^3.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
-    "@flow-pipe/core": "*",
+    "@request-orchestrator/core": "*",
     "@types/node-fetch": "^2.6.11",
     "@typescript-eslint/eslint-plugin": "^8.50.1",
     "@typescript-eslint/parser": "^8.50.1",

@@ -1,8 +1,8 @@
 {
-  "name": "@flow-pipe/core",
+  "name": "@request-orchestrator/core",
   "version": "1.0.0",
   "type": "module",
-  "description": "Core types and base classes for flow-pipe request adapters",
+  "description": "Core types and base classes for request-orchestrator request adapters",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
   "exports": {
@@ -39,7 +39,7 @@
     "LICENSE"
   ],
   "keywords": [
-    "flow-pipe",
+    "request-orchestrator",
     "request",
     "adapter",
     "core",
@@ -58,7 +58,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dawidhermann/flow-pipe.git",
+    "url": "https://github.com/dawidhermann/request-orchestrator.git",
     "directory": "packages/core"
   },
   "sideEffects": false,
