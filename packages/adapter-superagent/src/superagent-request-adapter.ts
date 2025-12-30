@@ -1,8 +1,8 @@
-import { RequestAdapter } from "@request-orchestrator/core";
+import { RequestAdapter } from "@flow-conductor/core";
 import type {
   IRequestConfig,
   UrlValidationOptions,
-} from "@request-orchestrator/core";
+} from "@flow-conductor/core";
 import superagent, { type Response, type Request } from "superagent";
 
 /**

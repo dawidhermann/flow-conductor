@@ -1,8 +1,8 @@
 {
-  "name": "request-orchestrator",
+  "name": "flow-conductor",
   "version": "1.0.0",
   "type": "module",
-  "description": "A powerful TypeScript library for creating and managing request chains. Request-orchestrator allows you to chain multiple HTTP requests together, transform results, and handle responses with ease.",
+  "description": "A powerful TypeScript library for creating and managing request chains. Flow-conductor allows you to chain multiple HTTP requests together, transform results, and handle responses with ease.",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
   "workspaces": [
@@ -52,14 +52,14 @@
   ],
   "scripts": {
     "test": "npm run test --workspaces",
-    "test:watch": "npm run test:watch --workspace=@request-orchestrator/core",
+    "test:watch": "npm run test:watch --workspace=@flow-conductor/core",
     "test:coverage": "c8 npm test",
     "test:coverage:report": "c8 report --reporter=html",
     "build": "npm run build:core && npm run build:adapter-fetch && npm run build:adapter-axios && npm run build:adapter-superagent && tsup",
-    "build:core": "npm run build --workspace=@request-orchestrator/core",
-    "build:adapter-fetch": "npm run build --workspace=@request-orchestrator/adapter-fetch",
-    "build:adapter-axios": "npm run build --workspace=@request-orchestrator/adapter-axios",
-    "build:adapter-superagent": "npm run build --workspace=@request-orchestrator/adapter-superagent",
+    "build:core": "npm run build --workspace=@flow-conductor/core",
+    "build:adapter-fetch": "npm run build --workspace=@flow-conductor/adapter-fetch",
+    "build:adapter-axios": "npm run build --workspace=@flow-conductor/adapter-axios",
+    "build:adapter-superagent": "npm run build --workspace=@flow-conductor/adapter-superagent",
     "clean": "rm -rf build && npm run clean --workspaces",
     "lint": "npm run lint --workspaces && eslint index.ts",
     "lint:fix": "npm run lint:fix --workspaces && eslint index.ts --fix",
@@ -72,14 +72,14 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dawidhermann/request-orchestrator.git"
+    "url": "https://github.com/dawidhermann/flow-conductor.git"
   },
   "sideEffects": false,
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@request-orchestrator/core": "*"
+    "@flow-conductor/core": "*"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",

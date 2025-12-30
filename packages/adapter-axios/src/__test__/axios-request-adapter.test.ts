@@ -1,6 +1,6 @@
 import { describe, test, beforeEach } from "node:test";
 import * as assert from "node:assert";
-import { RequestChain } from "@request-orchestrator/core";
+import { RequestChain } from "@flow-conductor/core";
 import type { AxiosResponse } from "axios";
 import type { AxiosRequestConfigType } from "../axios-request-adapter";
 import TestAxiosAdapter from "./__mocks__/test-axios-adapter";

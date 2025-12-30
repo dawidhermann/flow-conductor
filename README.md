@@ -1,14 +1,14 @@
-# request-orchestrator
+# flow-conductor
 
 **Declarative API workflow orchestration for Node.js**
 
-Stop writing spaghetti code for complex API workflows. Request-orchestrator gives you a declarative, type-safe way to orchestrate sequential HTTP operations with built-in error handling, compensation, and observability.
+Stop writing spaghetti code for complex API workflows. Flow-conductor gives you a declarative, type-safe way to orchestrate sequential HTTP operations with built-in error handling, compensation, and observability.
 
 ## Quick Start
 
 ### Example: Stripe Webhook Processing
 
-**Without request-orchestrator** - 80+ lines of error handling spaghetti:
+**Without flow-conductor** - 80+ lines of error handling spaghetti:
 
 ```typescript
 app.post('/webhook/stripe', async (req, res) => {
@@ -60,11 +60,11 @@ app.post('/webhook/stripe', async (req, res) => {
 });
 ```
 
-**With request-orchestrator** - Clean, declarative workflow:
+**With flow-conductor** - Clean, declarative workflow:
 
 ```typescript
-import { RequestChain } from 'request-orchestrator';
-import { FetchRequestAdapter } from 'request-orchestrator/adapter-fetch';
+import { RequestChain } from 'flow-conductor';
+import { FetchRequestAdapter } from 'flow-conductor/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 
@@ -148,8 +148,8 @@ async function processStripeWebhook(body: string, signature: string) {
 ### Example: OAuth Flow
 
 ```typescript
-import { RequestChain } from 'request-orchestrator';
-import { FetchRequestAdapter } from 'request-orchestrator/adapter-fetch';
+import { RequestChain } from 'flow-conductor';
+import { FetchRequestAdapter } from 'flow-conductor/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 
@@ -181,8 +181,8 @@ console.log(await userData.json());
 ### Simple Example
 
 ```typescript
-import { RequestChain } from 'request-orchestrator';
-import { FetchRequestAdapter } from 'request-orchestrator/adapter-fetch';
+import { RequestChain } from 'flow-conductor';
+import { FetchRequestAdapter } from 'flow-conductor/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 
@@ -240,25 +240,25 @@ RequestChain.begin(authFlow, adapter)
 ## Installation
 
 ```bash
-npm install request-orchestrator
+npm install flow-conductor
 ```
 
 Or install packages individually:
 
 ```bash
 # Core package (required)
-npm install @request-orchestrator/core
+npm install @flow-conductor/core
 
 # Choose your adapter:
-npm install @request-orchestrator/adapter-fetch         # Native Fetch API
-npm install @request-orchestrator/adapter-node-fetch    # node-fetch adapter
-npm install @request-orchestrator/adapter-axios         # Axios adapter
-npm install @request-orchestrator/adapter-superagent    # Superagent adapter
+npm install @flow-conductor/adapter-fetch         # Native Fetch API
+npm install @flow-conductor/adapter-node-fetch    # node-fetch adapter
+npm install @flow-conductor/adapter-axios         # Axios adapter
+npm install @flow-conductor/adapter-superagent    # Superagent adapter
 ```
 
 ## Request Adapters
 
-Request-orchestrator uses a **modular adapter system** - you choose which HTTP library to use:
+Flow-conductor uses a **modular adapter system** - you choose which HTTP library to use:
 
 - **`FetchRequestAdapter`** - Native Fetch API (Node.js 18+, browsers) - Zero dependencies
 - **`NodeFetchRequestAdapter`** - node-fetch package (Node.js only)
@@ -268,8 +268,8 @@ Request-orchestrator uses a **modular adapter system** - you choose which HTTP l
 All adapters share the same API - easy to switch:
 
 ```typescript
-import { RequestChain } from 'request-orchestrator';
-import { FetchRequestAdapter } from 'request-orchestrator/adapter-fetch';
+import { RequestChain } from 'flow-conductor';
+import { FetchRequestAdapter } from 'flow-conductor/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 
@@ -294,16 +294,16 @@ const result = await RequestChain.begin(
 - ⚡ **TypeScript First**: Full TypeScript support with type inference
 - 🔒 **Built-in SSRF Protection**: Automatic URL validation
 
-## When you need request-orchestrator
+## When you need flow-conductor
 
 ❌ **Simple data fetching** → Use `fetch()` or `axios`  
 ❌ **React data management** → Use React Query or RTK Query  
-✅ **Complex backend workflows** → Use request-orchestrator  
-✅ **Multi-step API orchestration** → Use request-orchestrator  
-✅ **Webhook processing pipelines** → Use request-orchestrator  
-✅ **LLM agent tool chains** → Use request-orchestrator
+✅ **Complex backend workflows** → Use flow-conductor  
+✅ **Multi-step API orchestration** → Use flow-conductor  
+✅ **Webhook processing pipelines** → Use flow-conductor  
+✅ **LLM agent tool chains** → Use flow-conductor
 
-## Is request-orchestrator for you?
+## Is flow-conductor for you?
 
 ✅ **YES** if you're building:
 - Backend API services with complex workflows
@@ -332,22 +332,22 @@ You should! For simple cases like:
 - 2-3 sequential requests
 - React component data fetching
 
-Use request-orchestrator when you have:
+Use flow-conductor when you have:
 - 5+ sequential API calls where each depends on previous result
 - Complex error handling with compensation logic
 - Need to transform data between steps
 - Want declarative, testable API workflows
 - Building webhook processors or agent systems
 
-## request-orchestrator vs Alternatives
+## flow-conductor vs Alternatives
 
-| Tool | Use Case | request-orchestrator Advantage |
+| Tool | Use Case | flow-conductor Advantage |
 |------|----------|---------------------|
 | fetch/axios | Simple requests | ❌ Use those instead |
 | React Query | Frontend caching | ❌ Different problem |
-| Bull/BullMQ | Background jobs | ✅ request-orchestrator = sync workflows |
-| Temporal | Complex orchestration | ✅ request-orchestrator = simpler, lighter |
-| Inngest | Serverless workflows | ✅ request-orchestrator = self-hosted |
+| Bull/BullMQ | Background jobs | ✅ flow-conductor = sync workflows |
+| Temporal | Complex orchestration | ✅ flow-conductor = simpler, lighter |
+| Inngest | Serverless workflows | ✅ flow-conductor = self-hosted |
 
 ## Documentation
 

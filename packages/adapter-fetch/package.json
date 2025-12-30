@@ -1,8 +1,8 @@
 {
-  "name": "@request-orchestrator/adapter-fetch",
+  "name": "@flow-conductor/adapter-fetch",
   "version": "1.0.0",
   "type": "module",
-  "description": "Fetch API adapter for request-orchestrator",
+  "description": "Fetch API adapter for flow-conductor",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
   "exports": {
@@ -19,7 +19,7 @@
     "LICENSE"
   ],
   "keywords": [
-    "request-orchestrator",
+    "flow-conductor",
     "request",
     "adapter",
     "fetch",
@@ -39,7 +39,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dawidhermann/request-orchestrator.git",
+    "url": "https://github.com/dawidhermann/flow-conductor.git",
     "directory": "packages/adapter-fetch"
   },
   "sideEffects": false,
@@ -47,11 +47,11 @@
     "node": ">=18.0.0"
   },
   "peerDependencies": {
-    "@request-orchestrator/core": "^1.0.0"
+    "@flow-conductor/core": "^1.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
-    "@request-orchestrator/core": "*",
+    "@flow-conductor/core": "*",
     "@typescript-eslint/eslint-plugin": "^8.50.1",
     "@typescript-eslint/parser": "^8.50.1",
     "eslint": "^9.39.2",

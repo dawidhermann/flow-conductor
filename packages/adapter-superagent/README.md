@@ -1,20 +1,20 @@
-# @request-orchestrator/adapter-superagent
+# @flow-conductor/adapter-superagent
 
-Superagent adapter for request-orchestrator. This adapter uses Superagent for making HTTP requests, providing a fluent API and excellent browser/Node.js support.
+Superagent adapter for flow-conductor. This adapter uses Superagent for making HTTP requests, providing a fluent API and excellent browser/Node.js support.
 
 ## Installation
 
 ```bash
-npm install @request-orchestrator/adapter-superagent @request-orchestrator/core superagent
+npm install @flow-conductor/adapter-superagent @flow-conductor/core superagent
 ```
 
-**Note**: Both `@request-orchestrator/core` and `superagent` are peer dependencies and must be installed alongside this package.
+**Note**: Both `@flow-conductor/core` and `superagent` are peer dependencies and must be installed alongside this package.
 
 ## Quick Start
 
 ```typescript
-import { RequestChain } from "@request-orchestrator/core";
-import { SuperagentRequestAdapter } from "@request-orchestrator/adapter-superagent";
+import { RequestChain } from "@flow-conductor/core";
+import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
@@ -38,8 +38,8 @@ console.log(result.headers); // Response headers
 ### Basic GET Request
 
 ```typescript
-import { RequestChain } from "@request-orchestrator/core";
-import { SuperagentRequestAdapter } from "@request-orchestrator/adapter-superagent";
+import { RequestChain } from "@flow-conductor/core";
+import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
@@ -60,8 +60,8 @@ console.log(user);
 ### POST Request with Data
 
 ```typescript
-import { RequestChain } from "@request-orchestrator/core";
-import { SuperagentRequestAdapter } from "@request-orchestrator/adapter-superagent";
+import { RequestChain } from "@flow-conductor/core";
+import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
@@ -86,8 +86,8 @@ console.log(newUser);
 ### Request with Custom Headers
 
 ```typescript
-import { RequestChain } from "@request-orchestrator/core";
-import { SuperagentRequestAdapter } from "@request-orchestrator/adapter-superagent";
+import { RequestChain } from "@flow-conductor/core";
+import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
@@ -109,8 +109,8 @@ const result = await RequestChain.begin(
 ### Chained Requests
 
 ```typescript
-import { RequestChain } from "@request-orchestrator/core";
-import { SuperagentRequestAdapter } from "@request-orchestrator/adapter-superagent";
+import { RequestChain } from "@flow-conductor/core";
+import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
@@ -297,8 +297,8 @@ console.log(user.name);
 Superagent throws errors for HTTP error statuses (4xx, 5xx):
 
 ```typescript
-import { RequestChain } from "@request-orchestrator/core";
-import { SuperagentRequestAdapter } from "@request-orchestrator/adapter-superagent";
+import { RequestChain } from "@flow-conductor/core";
+import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
@@ -367,8 +367,8 @@ try {
 ### Authentication Flow
 
 ```typescript
-import { RequestChain } from "@request-orchestrator/core";
-import { SuperagentRequestAdapter } from "@request-orchestrator/adapter-superagent";
+import { RequestChain } from "@flow-conductor/core";
+import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
@@ -402,8 +402,8 @@ console.log(profile);
 ### File Upload
 
 ```typescript
-import { RequestChain } from "@request-orchestrator/core";
-import { SuperagentRequestAdapter } from "@request-orchestrator/adapter-superagent";
+import { RequestChain } from "@flow-conductor/core";
+import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
@@ -453,7 +453,7 @@ Extends `IRequestConfig` with standard request configuration options.
 
 ## Requirements
 
-- `@request-orchestrator/core` (peer dependency)
+- `@flow-conductor/core` (peer dependency)
 - `superagent` ^8.0.0 (peer dependency)
 - Node.js 18+
 - TypeScript 5.0+

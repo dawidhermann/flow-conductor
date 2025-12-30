@@ -1,20 +1,20 @@
-import { RequestAdapter } from "@request-orchestrator/core";
+import { RequestAdapter } from "@flow-conductor/core";
 import type {
   IRequestConfig,
   UrlValidationOptions,
-} from "@request-orchestrator/core";
+} from "@flow-conductor/core";
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 
 /**
  * Extended request configuration type that combines IRequestConfig with Axios-specific options.
- * Allows using all Axios configuration options while maintaining compatibility with request-orchestrator.
+ * Allows using all Axios configuration options while maintaining compatibility with flow-conductor.
  */
 export type AxiosRequestConfigType = IRequestConfig &
   Partial<AxiosRequestConfig>;
 
 /**
  * Request adapter implementation using Axios as the underlying HTTP client.
- * Provides seamless integration between request-orchestrator and Axios.
+ * Provides seamless integration between flow-conductor and Axios.
  *
  * @example
  * ```typescript
@@ -40,7 +40,7 @@ export default class AxiosRequestAdapter extends RequestAdapter<
 
   /**
    * Creates and executes an HTTP request using Axios.
-   * Converts request-orchestrator request configuration to Axios format.
+   * Converts flow-conductor request configuration to Axios format.
    *
    * @param requestConfig - The request configuration object
    * @returns A promise that resolves to an AxiosResponse

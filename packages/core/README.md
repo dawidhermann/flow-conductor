@@ -1,16 +1,16 @@
-# @request-orchestrator/core
+# @flow-conductor/core
 
-Core types and base classes for request-orchestrator request adapters.
+Core types and base classes for flow-conductor request adapters.
 
 ## Installation
 
 ```bash
-npm install @request-orchestrator/core
+npm install @flow-conductor/core
 ```
 
 ## Overview
 
-This package provides the foundational types and classes for building request adapters and managing request chains. It's the core dependency that all request-orchestrator adapters depend on.
+This package provides the foundational types and classes for building request adapters and managing request chains. It's the core dependency that all flow-conductor adapters depend on.
 
 ## What's Included
 
@@ -35,7 +35,7 @@ This package provides the foundational types and classes for building request ad
 ### Basic Usage
 
 ```typescript
-import { RequestChain, RequestAdapter, IRequestConfig } from "@request-orchestrator/core";
+import { RequestChain, RequestAdapter, IRequestConfig } from "@flow-conductor/core";
 
 // You need to provide an adapter - see adapter packages
 class MyAdapter extends RequestAdapter<Response, IRequestConfig> {
@@ -59,7 +59,7 @@ const result = await RequestChain.begin(
 To create a custom adapter, extend the `RequestAdapter` class:
 
 ```typescript
-import { RequestAdapter, IRequestConfig } from "@request-orchestrator/core";
+import { RequestAdapter, IRequestConfig } from "@flow-conductor/core";
 
 export default class MyCustomAdapter extends RequestAdapter<
   MyResponseType,
@@ -88,7 +88,7 @@ export default class MyCustomAdapter extends RequestAdapter<
 ### Using RequestChain
 
 ```typescript
-import { RequestChain } from "@request-orchestrator/core";
+import { RequestChain } from "@flow-conductor/core";
 import { MyAdapter } from "./MyAdapter";
 
 const adapter = new MyAdapter();
@@ -117,7 +117,7 @@ const result = await RequestChain.begin(
 `RequestChain` extends `RequestManager`, which provides additional methods:
 
 ```typescript
-import { RequestChain } from "@request-orchestrator/core";
+import { RequestChain } from "@flow-conductor/core";
 
 const adapter = new MyAdapter();
 

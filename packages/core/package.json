@@ -1,8 +1,8 @@
 {
-  "name": "@request-orchestrator/core",
+  "name": "@flow-conductor/core",
   "version": "1.0.0",
   "type": "module",
-  "description": "Core types and base classes for request-orchestrator request adapters",
+  "description": "Core types and base classes for flow-conductor request adapters",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
   "exports": {
@@ -39,7 +39,7 @@
     "LICENSE"
   ],
   "keywords": [
-    "request-orchestrator",
+    "flow-conductor",
     "request",
     "adapter",
     "core",
@@ -58,7 +58,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dawidhermann/request-orchestrator.git",
+    "url": "https://github.com/dawidhermann/flow-conductor.git",
     "directory": "packages/core"
   },
   "sideEffects": false,

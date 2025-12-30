@@ -15,7 +15,7 @@ We actively support and provide security updates for the following versions:
 
 Instead, please report them via GitHub's Security Advisory feature:
 
-**Report here**: [GitHub Security Advisory](https://github.com/dawidhermann/request-orchestrator/security/advisories/new)
+**Report here**: [GitHub Security Advisory](https://github.com/dawidhermann/flow-conductor/security/advisories/new)
 
 This allows us to:
 - Review the vulnerability privately
@@ -38,13 +38,13 @@ When reporting a vulnerability, please include:
 - **Status Update**: Within 7 days
 - **Fix Timeline**: Depends on severity (typically 30-90 days)
 
-We appreciate your help in keeping request-orchestrator secure!
+We appreciate your help in keeping flow-conductor secure!
 
 ## Security Features
 
 ### SSRF Protection
 
-request-orchestrator includes built-in protection against Server-Side Request Forgery (SSRF) attacks:
+flow-conductor includes built-in protection against Server-Side Request Forgery (SSRF) attacks:
 
 #### Default Protection
 
@@ -60,7 +60,7 @@ By default, all adapters validate URLs before making requests:
 For development or testing scenarios, you can configure validation:
 
 ```typescript
-import { FetchRequestAdapter } from 'request-orchestrator/adapter-fetch';
+import { FetchRequestAdapter } from 'flow-conductor/adapter-fetch';
 
 // Allow localhost for local development
 const devAdapter = new FetchRequestAdapter({
@@ -91,10 +91,10 @@ const unsafeAdapter = new FetchRequestAdapter({
 
 ### Error Handling
 
-When a potentially dangerous URL is detected, request-orchestrator throws an `SSRFError`:
+When a potentially dangerous URL is detected, flow-conductor throws an `SSRFError`:
 
 ```typescript
-import { SSRFError } from 'request-orchestrator';
+import { SSRFError } from 'flow-conductor';
 
 try {
   await RequestChain.begin(
@@ -260,7 +260,7 @@ if (!Array.isArray(data) || !data.every(user => user.id && user.name)) {
 
 ### Server-Side Usage
 
-When using request-orchestrator server-side:
+When using flow-conductor server-side:
 
 1. **SSRF Protection**: Enabled by default, but ensure you're not disabling it unnecessarily
 2. **Input Validation**: Always validate user-provided URLs, even with SSRF protection
@@ -269,7 +269,7 @@ When using request-orchestrator server-side:
 
 ### Client-Side Usage
 
-When using request-orchestrator in browsers:
+When using flow-conductor in browsers:
 
 1. **CORS**: Be aware of CORS policies when making cross-origin requests
 2. **Credentials**: Use `credentials: 'include'` carefully - only for trusted domains
@@ -296,10 +296,10 @@ Security updates are released as:
 - **Patch versions** (1.0.x) for security fixes
 - **Minor versions** (1.x.0) for security features that don't break compatibility
 
-We recommend keeping request-orchestrator up to date:
+We recommend keeping flow-conductor up to date:
 
 ```bash
-npm update request-orchestrator
+npm update flow-conductor
 ```
 
 ## Additional Resources
@@ -310,5 +310,5 @@ npm update request-orchestrator
 
 ## License
 
-This security policy is part of the request-orchestrator project and is subject to the same license terms.
+This security policy is part of the flow-conductor project and is subject to the same license terms.
 

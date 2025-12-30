@@ -1,6 +1,6 @@
 import { describe, test, beforeEach } from "node:test";
 import * as assert from "node:assert";
-import { RequestChain } from "@request-orchestrator/core";
+import { RequestChain } from "@flow-conductor/core";
 import type { Response } from "superagent";
 import type { SuperagentRequestConfig } from "../superagent-request-adapter";
 import TestSuperagentAdapter from "./__mocks__/test-superagent-adapter";

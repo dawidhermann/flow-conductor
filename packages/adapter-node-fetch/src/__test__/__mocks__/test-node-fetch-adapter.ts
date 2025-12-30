@@ -1,4 +1,4 @@
-import { RequestAdapter } from "@request-orchestrator/core";
+import { RequestAdapter } from "@flow-conductor/core";
 import type { Response } from "node-fetch";
 import { mockNodeFetch } from "./node-fetch-mock";
 import type { NodeFetchRequestConfig } from "../../node-fetch-request-adapter";

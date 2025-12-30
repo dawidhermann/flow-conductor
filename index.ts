@@ -1,8 +1,8 @@
 /**
  * @packageDocumentation
- * @module request-orchestrator
+ * @module flow-conductor
  *
- * Request-Orchestrator
+ * Flow-Conductor
  *
  * A flexible request pipeline library for building sequential HTTP request chains
  * with support for conditional execution, result mapping, and error handling.
@@ -16,8 +16,8 @@ export {
   begin,
   RequestAdapter,
   RequestManager,
-} from "@request-orchestrator/core";
-export { default } from "@request-orchestrator/core";
+} from "@flow-conductor/core";
+export { default } from "@flow-conductor/core";
 
 // Re-export types from core package
 export type {
@@ -28,4 +28,4 @@ export type {
   BasePipelineStage,
   ErrorHandler,
   ResultHandler,
-} from "@request-orchestrator/core";
+} from "@flow-conductor/core";

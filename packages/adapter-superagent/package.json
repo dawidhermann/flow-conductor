@@ -1,8 +1,8 @@
 {
-  "name": "@request-orchestrator/adapter-superagent",
+  "name": "@flow-conductor/adapter-superagent",
   "version": "1.0.0",
   "type": "module",
-  "description": "Superagent adapter for request-orchestrator",
+  "description": "Superagent adapter for flow-conductor",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
   "exports": {
@@ -19,7 +19,7 @@
     "LICENSE"
   ],
   "keywords": [
-    "request-orchestrator",
+    "flow-conductor",
     "request",
     "adapter",
     "superagent",
@@ -40,7 +40,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dawidhermann/request-orchestrator.git",
+    "url": "https://github.com/dawidhermann/flow-conductor.git",
     "directory": "packages/adapter-superagent"
   },
   "sideEffects": false,
@@ -48,12 +48,12 @@
     "node": ">=18.0.0"
   },
   "peerDependencies": {
-    "@request-orchestrator/core": "^1.0.0",
+    "@flow-conductor/core": "^1.0.0",
     "superagent": "^8.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
-    "@request-orchestrator/core": "*",
+    "@flow-conductor/core": "*",
     "@types/superagent": "^4.1.16",
     "@typescript-eslint/eslint-plugin": "^8.50.1",
     "@typescript-eslint/parser": "^8.50.1",

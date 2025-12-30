@@ -1,10 +1,10 @@
 /**
  * @packageDocumentation
- * @module @request-orchestrator/adapter-superagent
+ * @module @flow-conductor/adapter-superagent
  *
- * Request-Orchestrator Superagent Adapter Package
+ * Flow-Conductor Superagent Adapter Package
  *
- * Provides a Superagent-based request adapter for request-orchestrator.
+ * Provides a Superagent-based request adapter for flow-conductor.
  * Use this adapter when you want to leverage Superagent's fluent API
  * and plugin ecosystem.
  */

@@ -17,8 +17,8 @@
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
 		"paths": {
-			"@request-orchestrator/core": ["./packages/core/src/index.ts"],
-			"@request-orchestrator/adapter-fetch": ["./packages/adapter-fetch/src/index.ts"]
+			"@flow-conductor/core": ["./packages/core/src/index.ts"],
+			"@flow-conductor/adapter-fetch": ["./packages/adapter-fetch/src/index.ts"]
 		}
 	},
 	"include": ["./index.ts"],

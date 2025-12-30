@@ -1,4 +1,4 @@
-import { RequestAdapter } from "@request-orchestrator/core";
+import { RequestAdapter } from "@flow-conductor/core";
 import type { Response } from "superagent";
 import { mockSuperagent } from "./superagent-mock";
 import type { SuperagentRequestConfig } from "../../superagent-request-adapter";

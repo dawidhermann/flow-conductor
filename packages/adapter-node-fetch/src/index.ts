@@ -1,10 +1,10 @@
 /**
  * @packageDocumentation
- * @module @request-orchestrator/adapter-node-fetch
+ * @module @flow-conductor/adapter-node-fetch
  *
- * Request-Orchestrator Node-Fetch Adapter Package
+ * Flow-Conductor Node-Fetch Adapter Package
  *
- * Provides a node-fetch-based request adapter for request-orchestrator.
+ * Provides a node-fetch-based request adapter for flow-conductor.
  * This adapter uses node-fetch, making it ideal for Node.js environments
  * where you need a reliable HTTP client.
  */

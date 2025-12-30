@@ -1,8 +1,8 @@
 /**
  * @packageDocumentation
- * @module @request-orchestrator/core
+ * @module @flow-conductor/core
  *
- * Request-Orchestrator Core Package
+ * Flow-Conductor Core Package
  *
  * A flexible request pipeline library for building sequential HTTP request chains
  * with support for conditional execution, result mapping, and error handling.
