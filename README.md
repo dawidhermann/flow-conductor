@@ -63,7 +63,7 @@ app.post('/webhook/stripe', async (req, res) => {
 **With flow-conductor** - Clean, declarative workflow:
 
 ```typescript
-import { RequestChain } from 'flow-conductor';
+import { begin } from 'flow-conductor';
 import { FetchRequestAdapter } from 'flow-conductor/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
@@ -78,7 +78,7 @@ app.post('/webhook/stripe', async (req, res) => {
 });
 
 async function processStripeWebhook(body: string, signature: string) {
-  return RequestChain.begin(
+  return begin(
     {
       config: {
         url: '/webhooks/stripe/validate',
@@ -148,12 +148,12 @@ async function processStripeWebhook(body: string, signature: string) {
 ### Example: OAuth Flow
 
 ```typescript
-import { RequestChain } from 'flow-conductor';
+import { begin } from 'flow-conductor';
 import { FetchRequestAdapter } from 'flow-conductor/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 
-const userData = await RequestChain.begin(
+const userData = await begin(
   {
     config: {
       url: 'https://api.example.com/auth/login',
@@ -181,12 +181,12 @@ console.log(await userData.json());
 ### Simple Example
 
 ```typescript
-import { RequestChain } from 'flow-conductor';
+import { begin } from 'flow-conductor';
 import { FetchRequestAdapter } from 'flow-conductor/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   { config: { url: 'https://api.example.com/users/1', method: 'GET' } },
   adapter
 ).execute();
@@ -232,7 +232,7 @@ const chain = createWebhookChain(mockAdapter);
 const authFlow = createAuthFlow();
 const dataFlow = createDataFlow();
 
-RequestChain.begin(authFlow, adapter)
+begin(authFlow, adapter)
   .next({ request: dataFlow })
   .execute();
 ```
@@ -268,12 +268,12 @@ Flow-conductor uses a **modular adapter system** - you choose which HTTP library
 All adapters share the same API - easy to switch:
 
 ```typescript
-import { RequestChain } from 'flow-conductor';
+import { begin } from 'flow-conductor';
 import { FetchRequestAdapter } from 'flow-conductor/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   { config: { url: '...', method: 'GET' } },
   adapter
 ).execute();

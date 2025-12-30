@@ -34,13 +34,13 @@ Flow-conductor is a **backend orchestration tool** for building complex API work
 Here's a complete example showing how flow-conductor simplifies complex workflows:
 
 ```typescript
-import { RequestChain } from 'flow-conductor';
+import { begin } from 'flow-conductor';
 import { FetchRequestAdapter } from 'flow-conductor/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 
 async function processStripeWebhook(body: string, signature: string) {
-  return RequestChain.begin(
+  return begin(
     {
       config: {
         url: '/webhooks/stripe/validate',
@@ -89,15 +89,15 @@ async function processStripeWebhook(body: string, signature: string) {
 
 ### Simple GET Request
 
-You can start a request chain using either `RequestChain.begin()` or the exported `begin()` function:
+You can start a request chain using the exported `begin()` function:
 
 ```typescript
-import { RequestChain, begin, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-// Using RequestChain.begin()
-const result1 = await RequestChain.begin(
+// Using begin()
+const result1 = await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' }
   },
@@ -121,12 +121,12 @@ console.log(await result2.json()); // Response data
 Chain multiple requests together. Each request can use the result from the previous one:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
 // Each step can access the previous result
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' }
   },
@@ -164,11 +164,11 @@ console.log(comments);
 Each `.next()` call receives the result from the previous request, allowing you to build dynamic request chains:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { 
       url: 'https://api.example.com/auth/login', 
@@ -210,11 +210,11 @@ console.log(settings);
 Transform request results using mapper functions. Mapped results are then available to subsequent requests:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' }
   },
@@ -253,11 +253,11 @@ Result interceptors allow you to perform side effects or additional processing o
 #### Basic Result Interceptor
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' },
     resultInterceptor: (result) => {
@@ -281,7 +281,7 @@ const result = await RequestChain.begin(
 Interceptors receive the **mapped result**, not the raw response. This means if you use a mapper, the interceptor will receive the transformed value:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' },
     mapper: async (result) => {
@@ -302,7 +302,7 @@ const result = await RequestChain.begin(
 Interceptors can be asynchronous, allowing you to perform async operations like saving to a database or calling another API:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' },
     resultInterceptor: async (result) => {
@@ -328,7 +328,7 @@ Interceptors are executed **after** mappers but **before** the result is stored 
 ```typescript
 const executionOrder: string[] = [];
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' },
     mapper: async (result) => {
@@ -358,7 +358,7 @@ Result interceptors are useful for:
 - **Side effects**: Trigger notifications, update UI state, etc.
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' },
     resultInterceptor: async (result) => {
@@ -386,7 +386,7 @@ If a stage is skipped due to a precondition returning `false`, the result interc
 ```typescript
 const interceptorCalled = false;
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' },
     precondition: () => false, // Stage will be skipped
@@ -405,12 +405,12 @@ const result = await RequestChain.begin(
 All HTTP methods are supported:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
 // POST request
-const createResult = await RequestChain.begin(
+const createResult = await begin(
   {
     config: {
       url: 'https://api.example.com/users',
@@ -422,7 +422,7 @@ const createResult = await RequestChain.begin(
 ).execute();
 
 // PUT request
-const updateResult = await RequestChain.begin(
+const updateResult = await begin(
   {
     config: {
       url: 'https://api.example.com/users/1',
@@ -434,7 +434,7 @@ const updateResult = await RequestChain.begin(
 ).execute();
 
 // DELETE request
-const deleteResult = await RequestChain.begin(
+const deleteResult = await begin(
   {
     config: {
       url: 'https://api.example.com/users/1',
@@ -456,11 +456,11 @@ Handlers allow you to react to different stages of request execution.
 Handle successful results:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-await RequestChain.begin(
+await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' }
   },
@@ -478,11 +478,11 @@ await RequestChain.begin(
 Handle errors gracefully:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-await RequestChain.begin(
+await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' }
   },
@@ -503,7 +503,7 @@ await RequestChain.begin(
 Execute code after request completion (success or failure):
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
@@ -512,7 +512,7 @@ const finishHandler = () => {
   // Cleanup, hide loading indicators, etc.
 };
 
-await RequestChain.begin(
+await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' }
   },
@@ -533,11 +533,11 @@ await RequestChain.begin(
 Use multiple handlers together:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-await RequestChain.begin(
+await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' }
   },
@@ -568,11 +568,11 @@ flow-conductor includes a powerful retry mechanism that automatically retries fa
 Retry failed requests with default settings (retries on network errors):
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' },
     retry: {
@@ -588,11 +588,11 @@ const result = await RequestChain.begin(
 Retry on specific HTTP status codes (e.g., 5xx server errors or 429 rate limits):
 
 ```typescript
-import { RequestChain, FetchRequestAdapter, retryOnStatusCodes } from 'flow-conductor';
+import { begin, FetchRequestAdapter, retryOnStatusCodes } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' },
     retry: {
@@ -609,11 +609,11 @@ const result = await RequestChain.begin(
 Retry on both network errors and specific HTTP status codes:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter, retryOnNetworkOrStatusCodes } from 'flow-conductor';
+import { begin, FetchRequestAdapter, retryOnNetworkOrStatusCodes } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' },
     retry: {
@@ -630,11 +630,11 @@ const result = await RequestChain.begin(
 Define custom logic for when to retry:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter, getErrorStatus } from 'flow-conductor';
+import { begin, FetchRequestAdapter, getErrorStatus } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' },
     retry: {
@@ -661,7 +661,7 @@ Configure delays between retry attempts:
 **Fixed Delay:**
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' },
     retry: {
@@ -676,7 +676,7 @@ const result = await RequestChain.begin(
 **Exponential Backoff:**
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' },
     retry: {
@@ -693,7 +693,7 @@ const result = await RequestChain.begin(
 **Custom Delay Function:**
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' },
     retry: {
@@ -749,13 +749,13 @@ flow-conductor supports progressive chunk processing for streaming responses, al
 Process streaming responses chunk by chunk as they arrive:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
 const processedChunks: Uint8Array[] = [];
 
-await RequestChain.begin(
+await begin(
   {
     config: { url: 'https://api.example.com/large-file', method: 'GET' },
     chunkProcessing: {
@@ -792,7 +792,7 @@ chunkProcessing: {
 You can accumulate chunks and get the complete result:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/data', method: 'GET' },
     chunkProcessing: {
@@ -818,7 +818,7 @@ if (result instanceof Uint8Array) {
 Process text streams with custom encoding:
 
 ```typescript
-await RequestChain.begin(
+await begin(
   {
     config: { url: 'https://api.example.com/text-stream', method: 'GET' },
     chunkProcessing: {
@@ -842,7 +842,7 @@ For line-delimited data (NDJSON, CSV, logs), you can process chunks and split by
 ```typescript
 let buffer = '';
 
-await RequestChain.begin(
+await begin(
   {
     config: { url: 'https://api.example.com/ndjson-stream', method: 'GET' },
     chunkProcessing: {
@@ -874,7 +874,7 @@ await RequestChain.begin(
 Chunk processing works seamlessly with mappers:
 
 ```typescript
-await RequestChain.begin(
+await begin(
   {
     config: { url: 'https://api.example.com/stream', method: 'GET' },
     chunkProcessing: {
@@ -900,7 +900,7 @@ await RequestChain.begin(
 Chunk processing works with retry mechanisms:
 
 ```typescript
-await RequestChain.begin(
+await begin(
   {
     config: { url: 'https://api.example.com/stream', method: 'GET' },
     chunkProcessing: {
@@ -946,11 +946,11 @@ Progressive chunk processing is ideal for:
 Execute all requests and get all results as an array. Each step can use the previous result:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-const results = await RequestChain.begin(
+const results = await begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' }
   },
@@ -994,7 +994,7 @@ console.log(user, posts, commentCount);
 Handle all results together. Each step builds on the previous one:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
@@ -1011,7 +1011,7 @@ const resultHandler = async (results) => {
   }
 };
 
-await RequestChain.begin(
+await begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' }
   },
@@ -1050,11 +1050,11 @@ await RequestChain.begin(
 Handle errors when executing all requests. Each step depends on the previous:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-await RequestChain.begin(
+await begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' }
   },
@@ -1094,12 +1094,12 @@ await RequestChain.begin(
 Chain request managers together. Nested chains can also use previous results:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
 // Create a nested chain that uses the parent result
-const nestedChain = RequestChain.begin(
+const nestedChain = begin(
   {
     config: async (previousResult) => {
       const user = await previousResult.json();
@@ -1112,7 +1112,7 @@ const nestedChain = RequestChain.begin(
   adapter
 );
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' }
   },
@@ -1153,11 +1153,11 @@ const result = await begin(
 Use `addAll()` to add multiple requests to a chain:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-const chain = RequestChain.begin(
+const chain = begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' }
   },
@@ -1198,15 +1198,15 @@ npm install flow-conductor
 
 **Usage:**
 ```typescript
-import { RequestChain } from '@flow-conductor/core';
+import { begin } from '@flow-conductor/core';
 import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
 // Or using main package with subpath exports:
-// import { RequestChain } from 'flow-conductor';
+// import { begin } from 'flow-conductor';
 // import { FetchRequestAdapter } from 'flow-conductor/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   { 
     config: { 
       url: 'https://api.example.com/users', 
@@ -1235,7 +1235,7 @@ const data = await result.json(); // Standard Response object
 const controller = new AbortController();
 const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: 'https://api.example.com/users',
@@ -1262,15 +1262,15 @@ npm install flow-conductor node-fetch
 
 **Usage:**
 ```typescript
-import { RequestChain } from '@flow-conductor/core';
+import { begin } from '@flow-conductor/core';
 import { NodeFetchRequestAdapter } from '@flow-conductor/adapter-node-fetch';
 // Or using main package with subpath exports:
-// import { RequestChain } from 'flow-conductor';
+// import { begin } from 'flow-conductor';
 // import { NodeFetchRequestAdapter } from 'flow-conductor/adapter-node-fetch';
 
 const adapter = new NodeFetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   { 
     config: { 
       url: 'https://api.example.com/users', 
@@ -1299,7 +1299,7 @@ const data = await result.json(); // Standard Response object
 - ⚠️ **No default timeout**: You must configure timeouts manually using the `timeout` option:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: 'https://api.example.com/users',
@@ -1324,15 +1324,15 @@ npm install flow-conductor axios
 
 **Usage:**
 ```typescript
-import { RequestChain } from '@flow-conductor/core';
+import { begin } from '@flow-conductor/core';
 import { AxiosRequestAdapter } from '@flow-conductor/adapter-axios';
 // Or using main package with subpath exports:
-// import { RequestChain } from 'flow-conductor';
+// import { begin } from 'flow-conductor';
 // import { AxiosRequestAdapter } from 'flow-conductor/adapter-axios';
 
 const adapter = new AxiosRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   { 
     config: { 
       url: 'https://api.example.com/users', 
@@ -1359,7 +1359,7 @@ console.log(result.status); // HTTP status code
 - ⚠️ **No default timeout**: You must configure timeouts manually using the `timeout` option:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: 'https://api.example.com/users',
@@ -1384,15 +1384,15 @@ npm install flow-conductor superagent
 
 **Usage:**
 ```typescript
-import { RequestChain } from '@flow-conductor/core';
+import { begin } from '@flow-conductor/core';
 import { SuperagentRequestAdapter } from '@flow-conductor/adapter-superagent';
 // Or using main package with subpath exports:
-// import { RequestChain } from 'flow-conductor';
+// import { begin } from 'flow-conductor';
 // import { SuperagentRequestAdapter } from 'flow-conductor/adapter-superagent';
 
 const adapter = new SuperagentRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   { 
     config: { 
       url: 'https://api.example.com/users', 
@@ -1418,7 +1418,7 @@ console.log(result.status); // HTTP status code
 - ⚠️ **No default timeout**: You must configure timeouts manually using the `timeout` option:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: 'https://api.example.com/users',
@@ -1436,19 +1436,19 @@ You can import adapters in three ways:
 
 **Option 1: From individual packages**
 ```typescript
-import { RequestChain } from '@flow-conductor/core';
+import { begin } from '@flow-conductor/core';
 import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
 ```
 
 **Option 2: Using subpath exports from main package**
 ```typescript
-import { RequestChain } from 'flow-conductor';
+import { begin } from 'flow-conductor';
 import { FetchRequestAdapter } from 'flow-conductor/adapter-fetch';
 ```
 
 **Option 3: Using subpath exports for all adapters**
 ```typescript
-import { RequestChain } from 'flow-conductor';
+import { begin } from 'flow-conductor';
 import { FetchRequestAdapter } from 'flow-conductor/adapter-fetch';
 import { NodeFetchRequestAdapter } from 'flow-conductor/adapter-node-fetch';
 import { AxiosRequestAdapter } from 'flow-conductor/adapter-axios';
@@ -1483,7 +1483,7 @@ const axiosAdapter = new AxiosRequestAdapter();
 const superagentAdapter = new SuperagentRequestAdapter();
 
 // Use any adapter with the same code
-const result = await RequestChain.begin(
+const result = await begin(
   { config: { url: '...', method: 'GET' } },
   fetchAdapter // or nodeFetchAdapter, axiosAdapter, or superagentAdapter
 ).execute();
@@ -1520,7 +1520,7 @@ class CustomAdapter extends RequestAdapter<Response, IRequestConfig> {
 }
 
 const adapter = new CustomAdapter();
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' }
   },
@@ -1543,12 +1543,12 @@ For a complete guide on creating adapters, see the [adapter template](./packages
 A common use case for flow-conductor is processing webhooks that require multiple sequential API calls:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
 async function processPaymentWebhook(paymentId: string) {
-  return RequestChain.begin(
+  return begin(
     {
       config: {
         url: `/api/payments/${paymentId}`,
@@ -1612,12 +1612,12 @@ async function processPaymentWebhook(paymentId: string) {
 ### Authentication Flow
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
 // Login and use token for subsequent requests
-const userData = await RequestChain.begin(
+const userData = await begin(
   {
     config: {
       url: 'https://api.example.com/auth/login',
@@ -1645,12 +1645,12 @@ console.log(await userData.json());
 ### Data Aggregation
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
 // Fetch user, then their posts, then comments
-const allData = await RequestChain.begin(
+const allData = await begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' }
   },
@@ -1688,12 +1688,12 @@ console.log({ user, posts, comments });
 ### Error Recovery
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
 try {
-  const result = await RequestChain.begin(
+  const result = await begin(
     {
       config: { url: 'https://api.example.com/users', method: 'GET' }
     },
@@ -1717,11 +1717,11 @@ try {
 Handle transient failures with automatic retry and exponential backoff:
 
 ```typescript
-import { RequestChain, FetchRequestAdapter, retryOnNetworkOrStatusCodes } from 'flow-conductor';
+import { begin, FetchRequestAdapter, retryOnNetworkOrStatusCodes } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: 'https://api.example.com/users', method: 'GET' },
     retry: {
@@ -1741,13 +1741,13 @@ console.log(await result.json());
 ### Conditional Requests
 
 ```typescript
-import { RequestChain, FetchRequestAdapter } from 'flow-conductor';
+import { begin, FetchRequestAdapter } from 'flow-conductor';
 
 const adapter = new FetchRequestAdapter();
 
 const shouldFetchPosts = true;
 
-const chain = RequestChain.begin(
+const chain = begin(
   {
     config: { url: 'https://api.example.com/users/1', method: 'GET' }
   },
@@ -1916,7 +1916,7 @@ import { FetchRequestAdapter, SSRFError } from 'flow-conductor';
 const adapter = new FetchRequestAdapter();
 
 try {
-  await RequestChain.begin(
+  await begin(
     { config: { url: 'http://localhost:3000', method: 'GET' } },
     adapter
   ).execute();
@@ -1976,7 +1976,7 @@ import { FetchRequestAdapter } from 'flow-conductor';
 const adapter = new FetchRequestAdapter();
 
 // Node.js 18+ - Using AbortSignal.timeout()
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: 'https://api.example.com/users',
@@ -1992,7 +1992,7 @@ const controller = new AbortController();
 const timeoutId = setTimeout(() => controller.abort(), 5000);
 
 try {
-  const result = await RequestChain.begin(
+  const result = await begin(
     {
       config: {
         url: 'https://api.example.com/users',
@@ -2014,7 +2014,7 @@ import { AxiosRequestAdapter } from 'flow-conductor/adapter-axios';
 
 const adapter = new AxiosRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: 'https://api.example.com/users',
@@ -2033,7 +2033,7 @@ import { SuperagentRequestAdapter } from 'flow-conductor/adapter-superagent';
 
 const adapter = new SuperagentRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: 'https://api.example.com/users',
@@ -2058,17 +2058,17 @@ const result = await RequestChain.begin(
 
 **Problem**: You're trying to start a chain without providing an adapter.
 
-**Solution**: Always provide an adapter when calling `RequestChain.begin()` or `begin()`. Make sure you've installed the adapter package:
+**Solution**: Always provide an adapter when calling `begin()`. Make sure you've installed the adapter package:
 
 ```typescript
 // Make sure you've installed the adapter:
 // npm install @flow-conductor/adapter-fetch @flow-conductor/core
 
-import { RequestChain } from '@flow-conductor/core';
+import { begin } from '@flow-conductor/core';
 import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
 
 const adapter = new FetchRequestAdapter();
-const result = await RequestChain.begin(
+const result = await begin(
   { config: { url: '...', method: 'GET' } },
   adapter // Don't forget this!
 ).execute();
@@ -2103,15 +2103,15 @@ npm install flow-conductor
 
 ```typescript
 // Fetch adapter - returns standard Response
-const fetchResult = await RequestChain.begin(..., fetchAdapter).execute();
+const fetchResult = await begin(..., fetchAdapter).execute();
 const data = await fetchResult.json(); // Must call .json()
 
 // Axios adapter - returns AxiosResponse with parsed data
-const axiosResult = await RequestChain.begin(..., axiosAdapter).execute();
+const axiosResult = await begin(..., axiosAdapter).execute();
 const data = axiosResult.data; // Already parsed, no .json() needed
 
 // Superagent adapter - returns Superagent Response with parsed body
-const superagentResult = await RequestChain.begin(..., superagentAdapter).execute();
+const superagentResult = await begin(..., superagentAdapter).execute();
 const data = superagentResult.body; // Already parsed, no .json() needed
 ```
 
@@ -2123,7 +2123,7 @@ const data = superagentResult.body; // Already parsed, no .json() needed
 
 ```typescript
 // Explicit typing
-const result = await RequestChain.begin<MyType, Response, IRequestConfig>(
+const result = await begin<MyType, Response, IRequestConfig>(
   { config: { url: '...', method: 'GET' } },
   adapter
 ).execute();

@@ -13,12 +13,12 @@ npm install @flow-conductor/adapter-superagent @flow-conductor/core superagent
 ## Quick Start
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -38,12 +38,12 @@ console.log(result.headers); // Response headers
 ### Basic GET Request
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -60,12 +60,12 @@ console.log(user);
 ### POST Request with Data
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -86,12 +86,12 @@ console.log(newUser);
 ### Request with Custom Headers
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -109,12 +109,12 @@ const result = await RequestChain.begin(
 ### Chained Requests
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -163,7 +163,7 @@ All standard HTTP methods are supported:
 
 ```typescript
 // GET
-const getResult = await RequestChain.begin(
+const getResult = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -174,7 +174,7 @@ const getResult = await RequestChain.begin(
 ).execute();
 
 // POST
-const postResult = await RequestChain.begin(
+const postResult = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -186,7 +186,7 @@ const postResult = await RequestChain.begin(
 ).execute();
 
 // PUT
-const putResult = await RequestChain.begin(
+const putResult = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -198,7 +198,7 @@ const putResult = await RequestChain.begin(
 ).execute();
 
 // DELETE
-const deleteResult = await RequestChain.begin(
+const deleteResult = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -220,7 +220,7 @@ Superagent automatically handles data serialization:
 
 ```typescript
 // POST with JSON data
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -236,7 +236,7 @@ const result = await RequestChain.begin(
 const formData = new FormData();
 formData.append("file", fileBlob);
 
-const uploadResult = await RequestChain.begin(
+const uploadResult = await begin(
   {
     config: {
       url: "https://api.example.com/upload",
@@ -254,7 +254,7 @@ const uploadResult = await RequestChain.begin(
 The adapter returns a Superagent `Response` object with the following properties:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -277,7 +277,7 @@ console.log(result.type); // Content-Type
 Superagent automatically parses JSON responses:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -297,13 +297,13 @@ console.log(user.name);
 Superagent throws errors for HTTP error statuses (4xx, 5xx):
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
 try {
-  const result = await RequestChain.begin(
+  const result = await begin(
     {
       config: {
         url: "https://api.example.com/users",
@@ -340,7 +340,7 @@ Superagent provides detailed error information:
 
 ```typescript
 try {
-  await RequestChain.begin(
+  await begin(
     {
       config: {
         url: "https://api.example.com/users",
@@ -367,13 +367,13 @@ try {
 ### Authentication Flow
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
 
 // Login and use token
-const userData = await RequestChain.begin(
+const userData = await begin(
   {
     config: {
       url: "https://api.example.com/auth/login",
@@ -402,7 +402,7 @@ console.log(profile);
 ### File Upload
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { SuperagentRequestAdapter } from "@flow-conductor/adapter-superagent";
 
 const adapter = new SuperagentRequestAdapter();
@@ -411,7 +411,7 @@ const formData = new FormData();
 formData.append("file", fileBlob);
 formData.append("name", "document.pdf");
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/upload",

@@ -35,7 +35,7 @@ This package provides the foundational types and classes for building request ad
 ### Basic Usage
 
 ```typescript
-import { RequestChain, RequestAdapter, IRequestConfig } from "@flow-conductor/core";
+import { begin, RequestAdapter, IRequestConfig } from "@flow-conductor/core";
 
 // You need to provide an adapter - see adapter packages
 class MyAdapter extends RequestAdapter<Response, IRequestConfig> {
@@ -46,7 +46,7 @@ class MyAdapter extends RequestAdapter<Response, IRequestConfig> {
 }
 
 const adapter = new MyAdapter();
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: "https://api.example.com/users", method: "GET" }
   },
@@ -88,13 +88,13 @@ export default class MyCustomAdapter extends RequestAdapter<
 ### Using RequestChain
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { MyAdapter } from "./MyAdapter";
 
 const adapter = new MyAdapter();
 
 // Simple chain
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: { url: "https://api.example.com/users/1", method: "GET" }
   },
@@ -117,11 +117,11 @@ const result = await RequestChain.begin(
 `RequestChain` extends `RequestManager`, which provides additional methods:
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 
 const adapter = new MyAdapter();
 
-const chain = RequestChain.begin(
+const chain = begin(
   { config: { url: "https://api.example.com/users", method: "GET" } },
   adapter
 )

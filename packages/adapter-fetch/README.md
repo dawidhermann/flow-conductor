@@ -13,12 +13,12 @@ npm install @flow-conductor/adapter-fetch @flow-conductor/core
 ## Quick Start
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { FetchRequestAdapter } from "@flow-conductor/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -37,12 +37,12 @@ console.log(data);
 ### Basic GET Request
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { FetchRequestAdapter } from "@flow-conductor/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -59,12 +59,12 @@ console.log(user);
 ### POST Request with Data
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { FetchRequestAdapter } from "@flow-conductor/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -85,12 +85,12 @@ console.log(newUser);
 ### Request with Custom Headers
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { FetchRequestAdapter } from "@flow-conductor/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -108,12 +108,12 @@ const result = await RequestChain.begin(
 ### Chained Requests
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { FetchRequestAdapter } from "@flow-conductor/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -162,7 +162,7 @@ interface FetchRequestConfig extends IRequestConfig {
 All standard Fetch API options are supported:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -191,7 +191,7 @@ The adapter automatically handles data serialization:
 
 ```typescript
 // POST with JSON data
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -204,7 +204,7 @@ const result = await RequestChain.begin(
 ).execute();
 
 // PUT with JSON data
-const updateResult = await RequestChain.begin(
+const updateResult = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -221,7 +221,7 @@ const updateResult = await RequestChain.begin(
 You can provide custom headers, which will be merged with default headers:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -243,7 +243,7 @@ const result = await RequestChain.begin(
 The adapter returns a standard `Response` object from the Fetch API. You can use all standard Response methods:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -271,13 +271,13 @@ console.log(result.headers); // Headers object
 The Fetch API only rejects on network errors, not HTTP error statuses. You may want to check the response status:
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { FetchRequestAdapter } from "@flow-conductor/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
 try {
-  const result = await RequestChain.begin(
+  const result = await begin(
     {
       config: {
         url: "https://api.example.com/users",
@@ -336,13 +336,13 @@ import { FetchRequestAdapter } from "@flow-conductor/adapter-fetch";
 ### Authentication Flow
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { FetchRequestAdapter } from "@flow-conductor/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
 // Login and use token
-const userData = await RequestChain.begin(
+const userData = await begin(
   {
     config: {
       url: "https://api.example.com/auth/login",
@@ -371,14 +371,14 @@ console.log(profile);
 ### File Upload
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { FetchRequestAdapter } from "@flow-conductor/adapter-fetch";
 
 const adapter = new FetchRequestAdapter();
 
 // Note: For file uploads, you may need to customize the adapter
 // to handle FormData instead of JSON
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/upload",

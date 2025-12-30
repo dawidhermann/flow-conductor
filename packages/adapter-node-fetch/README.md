@@ -13,12 +13,12 @@ npm install @flow-conductor/adapter-node-fetch @flow-conductor/core node-fetch
 ## Quick Start
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { NodeFetchRequestAdapter } from "@flow-conductor/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -37,12 +37,12 @@ console.log(data);
 ### Basic GET Request
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { NodeFetchRequestAdapter } from "@flow-conductor/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -59,12 +59,12 @@ console.log(user);
 ### POST Request with Data
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { NodeFetchRequestAdapter } from "@flow-conductor/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -85,12 +85,12 @@ console.log(newUser);
 ### Request with Custom Headers
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { NodeFetchRequestAdapter } from "@flow-conductor/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -108,12 +108,12 @@ const result = await RequestChain.begin(
 ### Chained Requests
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { NodeFetchRequestAdapter } from "@flow-conductor/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -162,7 +162,7 @@ interface NodeFetchRequestConfig extends IRequestConfig {
 All standard node-fetch options are supported:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -191,7 +191,7 @@ The adapter automatically handles data serialization:
 
 ```typescript
 // POST with JSON data
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -204,7 +204,7 @@ const result = await RequestChain.begin(
 ).execute();
 
 // POST with string data
-const textResult = await RequestChain.begin(
+const textResult = await begin(
   {
     config: {
       url: "https://api.example.com/data",
@@ -217,7 +217,7 @@ const textResult = await RequestChain.begin(
 ).execute();
 
 // PUT with JSON data
-const updateResult = await RequestChain.begin(
+const updateResult = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -234,7 +234,7 @@ const updateResult = await RequestChain.begin(
 You can provide custom headers, which will be merged with default headers:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -256,7 +256,7 @@ const result = await RequestChain.begin(
 The adapter returns a standard `Response` object from node-fetch. You can use all standard Response methods:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -284,13 +284,13 @@ console.log(result.headers); // Headers object
 node-fetch throws errors for network failures and rejects on HTTP error statuses (depending on configuration). You can handle errors using flow-conductor's error handling:
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { NodeFetchRequestAdapter } from "@flow-conductor/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
 try {
-  const result = await RequestChain.begin(
+  const result = await begin(
     {
       config: {
         url: "https://api.example.com/users",
@@ -335,13 +335,13 @@ This adapter is specifically designed for Node.js environments and uses `node-fe
 ### Authentication Flow
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { NodeFetchRequestAdapter } from "@flow-conductor/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
 // Login and use token
-const userData = await RequestChain.begin(
+const userData = await begin(
   {
     config: {
       url: "https://api.example.com/auth/login",
@@ -370,7 +370,7 @@ console.log(profile);
 ### File Upload
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { NodeFetchRequestAdapter } from "@flow-conductor/adapter-node-fetch";
 import { readFileSync } from "fs";
 
@@ -379,7 +379,7 @@ const adapter = new NodeFetchRequestAdapter();
 // Upload file as Buffer
 const fileBuffer = readFileSync("./file.pdf");
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/upload",
@@ -397,12 +397,12 @@ const result = await RequestChain.begin(
 ### Request with Timeout
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { NodeFetchRequestAdapter } from "@flow-conductor/adapter-node-fetch";
 
 const adapter = new NodeFetchRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",

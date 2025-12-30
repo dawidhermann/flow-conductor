@@ -13,12 +13,12 @@ npm install @flow-conductor/adapter-axios @flow-conductor/core axios
 ## Quick Start
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { AxiosRequestAdapter } from "@flow-conductor/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -38,12 +38,12 @@ console.log(result.headers); // Response headers
 ### Basic GET Request
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { AxiosRequestAdapter } from "@flow-conductor/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -60,12 +60,12 @@ console.log(user);
 ### POST Request with Data
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { AxiosRequestAdapter } from "@flow-conductor/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -86,12 +86,12 @@ console.log(newUser);
 ### Request with Custom Headers
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { AxiosRequestAdapter } from "@flow-conductor/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -109,12 +109,12 @@ const result = await RequestChain.begin(
 ### Chained Requests
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { AxiosRequestAdapter } from "@flow-conductor/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -163,7 +163,7 @@ interface AxiosRequestConfigType extends IRequestConfig {
 All standard Axios configuration options are supported:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -192,7 +192,7 @@ const result = await RequestChain.begin(
 Axios handles query parameters separately from the URL:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -219,7 +219,7 @@ Axios automatically handles data serialization:
 
 ```typescript
 // POST with JSON data
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -235,7 +235,7 @@ const result = await RequestChain.begin(
 const formData = new FormData();
 formData.append("file", fileBlob);
 
-const uploadResult = await RequestChain.begin(
+const uploadResult = await begin(
   {
     config: {
       url: "https://api.example.com/upload",
@@ -274,7 +274,7 @@ const axiosInstance = axios.create({
 The adapter returns an `AxiosResponse` object with the following properties:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -297,7 +297,7 @@ console.log(result.config); // Request configuration
 Unlike the Fetch API, Axios automatically parses JSON responses:
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users/1",
@@ -317,14 +317,14 @@ console.log(user.name);
 Axios throws errors for HTTP error statuses (4xx, 5xx), making error handling more straightforward:
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { AxiosRequestAdapter } from "@flow-conductor/adapter-axios";
 import { AxiosError } from "axios";
 
 const adapter = new AxiosRequestAdapter();
 
 try {
-  const result = await RequestChain.begin(
+  const result = await begin(
     {
       config: {
         url: "https://api.example.com/users",
@@ -360,7 +360,7 @@ Axios provides detailed error information:
 
 ```typescript
 try {
-  await RequestChain.begin(
+  await begin(
     {
       config: {
         url: "https://api.example.com/users",
@@ -392,13 +392,13 @@ try {
 ### Authentication Flow
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { AxiosRequestAdapter } from "@flow-conductor/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
 
 // Login and use token
-const userData = await RequestChain.begin(
+const userData = await begin(
   {
     config: {
       url: "https://api.example.com/auth/login",
@@ -427,7 +427,7 @@ console.log(profile);
 ### File Upload
 
 ```typescript
-import { RequestChain } from "@flow-conductor/core";
+import { begin } from "@flow-conductor/core";
 import { AxiosRequestAdapter } from "@flow-conductor/adapter-axios";
 
 const adapter = new AxiosRequestAdapter();
@@ -436,7 +436,7 @@ const formData = new FormData();
 formData.append("file", fileBlob);
 formData.append("name", "document.pdf");
 
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/upload",
@@ -456,7 +456,7 @@ console.log(result.data);
 ### Request with Timeout
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
@@ -471,7 +471,7 @@ const result = await RequestChain.begin(
 ### Request with Authentication
 
 ```typescript
-const result = await RequestChain.begin(
+const result = await begin(
   {
     config: {
       url: "https://api.example.com/users",
