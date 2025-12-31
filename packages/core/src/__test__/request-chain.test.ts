@@ -1266,6 +1266,401 @@ describe("Result interceptor test", () => {
   });
 });
 
+describe("Error handler test", () => {
+  test("Basic error handler execution", async () => {
+    resetFetchMock();
+    const errorMessage = "Request failed";
+    fetchMock.mockReject(new Error(errorMessage));
+    const errorHandler = createMockFn();
+    let errorThrown = false;
+
+    try {
+      await RequestChain.begin<
+        TestRequestResult<typeof firstUser>,
+        Response,
+        IRequestConfig
+      >(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+          errorHandler: (error) => {
+            errorHandler(error);
+          },
+        },
+        new TestAdapter()
+      ).execute();
+    } catch (error) {
+      errorThrown = true;
+      assert.strictEqual((error as Error).message, errorMessage);
+    }
+
+    assert.ok(errorHandler.toHaveBeenCalled());
+    assert.strictEqual(errorHandler.calls.length, 1);
+    assert.strictEqual(errorHandler.calls[0][0].message, errorMessage);
+    assert.ok(errorThrown); // Error should still be thrown after handler
+  });
+
+  test("Error handler receives correct error", async () => {
+    resetFetchMock();
+    const customError = new TypeError("Network error");
+    fetchMock.mockReject(customError);
+    let receivedError: Error | undefined;
+
+    try {
+      await RequestChain.begin<
+        TestRequestResult<typeof firstUser>,
+        Response,
+        IRequestConfig
+      >(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+          errorHandler: (error) => {
+            receivedError = error;
+          },
+        },
+        new TestAdapter()
+      ).execute();
+    } catch {
+      // Expected to throw
+    }
+
+    assert.ok(receivedError);
+    assert.strictEqual(receivedError, customError);
+    assert.strictEqual(receivedError.name, "TypeError");
+    assert.strictEqual(receivedError.message, "Network error");
+  });
+
+  test("Async error handler execution", async () => {
+    resetFetchMock();
+    const errorMessage = "Request failed";
+    fetchMock.mockReject(new Error(errorMessage));
+    let handlerResolved = false;
+    const errorHandler = createMockFn();
+
+    try {
+      await RequestChain.begin<
+        TestRequestResult<typeof firstUser>,
+        Response,
+        IRequestConfig
+      >(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+          errorHandler: async (error) => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            handlerResolved = true;
+            errorHandler(error);
+          },
+        },
+        new TestAdapter()
+      ).execute();
+    } catch {
+      // Expected to throw
+    }
+
+    assert.ok(handlerResolved);
+    assert.ok(errorHandler.toHaveBeenCalled());
+  });
+
+
+  test("Error handler with nested manager stage", async () => {
+    resetFetchMock();
+    const errorMessage = "Nested chain failed";
+    fetchMock.mockReject(new Error(errorMessage));
+    const errorHandler = createMockFn();
+    const nestedChain = RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+      },
+      new TestAdapter()
+    );
+
+    try {
+      await RequestChain.begin<
+        TestRequestResult<typeof firstUser>,
+        Response,
+        IRequestConfig
+      >(
+        {
+          request: nestedChain,
+          errorHandler: (error) => {
+            errorHandler(error);
+          },
+        },
+        new TestAdapter()
+      ).execute();
+    } catch {
+      // Expected to throw
+    }
+
+    assert.ok(errorHandler.toHaveBeenCalled());
+    assert.strictEqual(errorHandler.calls[0][0].message, errorMessage);
+  });
+
+  test("Error handler with retry - called on final failure", async () => {
+    resetFetchMock();
+    const errorMessage = "Network error";
+    fetchMock
+      .mockReject(new TypeError(errorMessage))
+      .mockReject(new TypeError(errorMessage))
+      .mockReject(new TypeError(errorMessage));
+    const errorHandler = createMockFn();
+
+    try {
+      await RequestChain.begin<
+        TestRequestResult<typeof firstUser>,
+        Response,
+        IRequestConfig
+      >(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+          retry: {
+            maxRetries: 2,
+            retryDelay: 10,
+          },
+          errorHandler: (error) => {
+            errorHandler(error);
+          },
+        },
+        new TestAdapter()
+      ).execute();
+    } catch {
+      // Expected to throw after retries exhausted
+    }
+
+    // Error handler should be called once after all retries are exhausted
+    assert.ok(errorHandler.toHaveBeenCalled());
+    assert.strictEqual(errorHandler.calls.length, 1);
+  });
+
+  test("Error handler with mapper - error occurs before mapper", async () => {
+    resetFetchMock();
+    const errorMessage = "Request failed";
+    fetchMock.mockReject(new Error(errorMessage));
+    const errorHandler = createMockFn();
+    let mapperCalled = false;
+
+    try {
+      await RequestChain.begin<
+        typeof firstUser,
+        Response,
+        IRequestConfig
+      >(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+          mapper: () => {
+            mapperCalled = true;
+            return firstUser;
+          },
+          errorHandler: (error) => {
+            errorHandler(error);
+          },
+        },
+        new TestAdapter()
+      ).execute();
+    } catch {
+      // Expected to throw
+    }
+
+    assert.ok(errorHandler.toHaveBeenCalled());
+    assert.ok(!mapperCalled); // Mapper should not be called when error occurs
+  });
+
+  test("Error handler with precondition - error occurs after precondition passes", async () => {
+    resetFetchMock();
+    const errorMessage = "Request failed";
+    fetchMock.mockReject(new Error(errorMessage));
+    let preconditionCalled = false;
+    const errorHandler = createMockFn();
+
+    try {
+      await RequestChain.begin<
+        TestRequestResult<typeof firstUser>,
+        Response,
+        IRequestConfig
+      >(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+          precondition: () => {
+            preconditionCalled = true;
+            return true;
+          },
+          errorHandler: (error) => {
+            errorHandler(error);
+          },
+        },
+        new TestAdapter()
+      ).execute();
+    } catch {
+      // Expected to throw
+    }
+
+    assert.ok(preconditionCalled); // Precondition should be checked first
+    assert.ok(errorHandler.toHaveBeenCalled()); // Error handler should be called
+  });
+
+  test("Error handler not called when stage succeeds", async () => {
+    resetFetchMock();
+    const response: string = JSON.stringify(firstUser);
+    fetchMock.mockResponseOnce(response);
+    const errorHandler = createMockFn();
+
+    await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users", method: "GET" },
+        errorHandler: () => {
+          errorHandler();
+        },
+      },
+      new TestAdapter()
+    ).execute();
+
+    assert.ok(!errorHandler.toHaveBeenCalled()); // Should not be called on success
+  });
+
+  test("Error handler execution order - called before error propagation", async () => {
+    resetFetchMock();
+    const errorMessage = "Request failed";
+    fetchMock.mockReject(new Error(errorMessage));
+    const executionOrder: string[] = [];
+    const errorHandler = createMockFn();
+
+    try {
+      await RequestChain.begin<
+        TestRequestResult<typeof firstUser>,
+        Response,
+        IRequestConfig
+      >(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+          errorHandler: (error) => {
+            executionOrder.push("errorHandler");
+            errorHandler(error);
+          },
+        },
+        new TestAdapter()
+      )
+        .withErrorHandler(() => {
+          executionOrder.push("chainErrorHandler");
+        })
+        .execute();
+    } catch {
+      executionOrder.push("catch");
+    }
+
+    // Stage error handler should be called before chain error handler
+    assert.ok(executionOrder.includes("errorHandler"));
+    assert.ok(executionOrder.indexOf("errorHandler") < executionOrder.indexOf("chainErrorHandler"));
+  });
+
+  test("Error handler with result interceptor - error occurs before interceptor", async () => {
+    resetFetchMock();
+    const errorMessage = "Request failed";
+    fetchMock.mockReject(new Error(errorMessage));
+    const errorHandler = createMockFn();
+    let interceptorCalled = false;
+
+    try {
+      await RequestChain.begin<
+        TestRequestResult<typeof firstUser>,
+        Response,
+        IRequestConfig
+      >(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+          resultInterceptor: () => {
+            interceptorCalled = true;
+          },
+          errorHandler: (error) => {
+            errorHandler(error);
+          },
+        },
+        new TestAdapter()
+      ).execute();
+    } catch {
+      // Expected to throw
+    }
+
+    assert.ok(errorHandler.toHaveBeenCalled());
+    assert.ok(!interceptorCalled); // Interceptor should not be called when error occurs
+  });
+
+  test("Error handler can access error properties", async () => {
+    resetFetchMock();
+    const customError = new Error("Custom error");
+    (customError as any).code = "ERR_CUSTOM";
+    fetchMock.mockReject(customError);
+    let errorCode: string | undefined;
+
+    try {
+      await RequestChain.begin<
+        TestRequestResult<typeof firstUser>,
+        Response,
+        IRequestConfig
+      >(
+        {
+          config: { url: "http://example.com/users", method: "GET" },
+          errorHandler: (error) => {
+            errorCode = (error as any).code;
+          },
+        },
+        new TestAdapter()
+      ).execute();
+    } catch {
+      // Expected to throw
+    }
+
+    assert.strictEqual(errorCode, "ERR_CUSTOM");
+  });
+
+  test("Error handler with skipped stage - should not be called", async () => {
+    resetFetchMock();
+    fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(thirdUser));
+    const errorHandler1 = createMockFn();
+    const errorHandler2 = createMockFn();
+    const errorHandler3 = createMockFn();
+
+    await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+        errorHandler: () => {
+          errorHandler1();
+        },
+      },
+      new TestAdapter()
+    )
+      .next<TestRequestResult<typeof secondUser>>({
+        config: { url: "http://example.com/users/2", method: "GET" },
+        precondition: () => false, // Skip this stage
+        errorHandler: () => {
+          errorHandler2();
+        },
+      })
+      .next<TestRequestResult<typeof thirdUser>>({
+        config: { url: "http://example.com/users/3", method: "GET" },
+        errorHandler: () => {
+          errorHandler3();
+        },
+      })
+      .execute();
+
+    // No errors occurred, so no error handlers should be called
+    assert.ok(!errorHandler1.toHaveBeenCalled());
+    assert.ok(!errorHandler2.toHaveBeenCalled());
+    assert.ok(!errorHandler3.toHaveBeenCalled());
+  });
+});
+
 describe("Coverage improvement tests", () => {
   test("Retry with exponential backoff and maxDelay cap branch", async () => {
     resetFetchMock();

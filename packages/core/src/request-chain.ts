@@ -234,30 +234,40 @@ export default class RequestChain<
 
       const previousEntity = requestEntityList[i - 1];
       const previousResult: Out | undefined = previousEntity?.result;
-      const requestResult: Out = await this.executeSingle<Out>(
-        requestEntity,
-        previousResult
-      );
-      let result: Out = requestResult;
-      if (requestEntity.mapper) {
-        let mappedResult: Out | Promise<Out>;
-        if (isPipelineRequestStage(requestEntity)) {
-          mappedResult = requestEntity.mapper(
-            requestResult as unknown as AdapterExecutionResult
-          );
-        } else if (isPipelineManagerStage(requestEntity)) {
-          mappedResult = requestEntity.mapper(requestResult as unknown as Out);
-        } else {
-          mappedResult = result;
+      try {
+        const requestResult: Out = await this.executeSingle<Out>(
+          requestEntity,
+          previousResult
+        );
+        let result: Out = requestResult;
+        if (requestEntity.mapper) {
+          let mappedResult: Out | Promise<Out>;
+          if (isPipelineRequestStage(requestEntity)) {
+            mappedResult = requestEntity.mapper(
+              requestResult as unknown as AdapterExecutionResult
+            );
+          } else if (isPipelineManagerStage(requestEntity)) {
+            mappedResult = requestEntity.mapper(
+              requestResult as unknown as Out
+            );
+          } else {
+            mappedResult = result;
+          }
+          result =
+            mappedResult instanceof Promise ? await mappedResult : mappedResult;
         }
-        result =
-          mappedResult instanceof Promise ? await mappedResult : mappedResult;
+        if (requestEntity.resultInterceptor) {
+          await requestEntity.resultInterceptor(result);
+        }
+        requestEntityList[i].result = result as Out;
+        results.push(result);
+      } catch (error) {
+        if (requestEntity.errorHandler) {
+          await requestEntity.errorHandler(error);
+          
+        }
+        throw error;
       }
-      if (requestEntity.resultInterceptor) {
-        await requestEntity.resultInterceptor(result);
-      }
-      requestEntityList[i].result = result as Out;
-      results.push(result);
     }
     return results;
   };

@@ -149,6 +149,13 @@ export interface BasePipelineStage<Result, Out = Result> {
    * @param result - The result from the stage
    */
   resultInterceptor?: (result: Out) => void | Promise<void>;
+
+  /**
+   * Optional error handler function to process the stage error.
+   * Can be used to perform additional actions on the error.
+   * @param error - The error from the stage
+   */
+  errorHandler?: (error: Error) => void | Promise<void>;
 }
 
 /**

@@ -475,7 +475,14 @@ await begin(
 
 #### Error Handler
 
-Handle errors gracefully:
+Flow-conductor supports two types of error handlers:
+
+1. **Chain-level error handlers** - Handle errors for the entire chain using `.withErrorHandler()`
+2. **Stage-level error handlers** - Handle errors for individual stages using the `errorHandler` property
+
+##### Chain-Level Error Handler
+
+Handle errors for the entire request chain:
 
 ```typescript
 import { begin, FetchRequestAdapter } from 'flow-conductor';
@@ -496,6 +503,193 @@ await begin(
   .catch(() => {
     // Handle promise rejection if needed
   });
+```
+
+##### Stage-Level Error Handler
+
+Handle errors for individual stages in the chain. Stage-level error handlers are called when a specific stage fails, before the error propagates to chain-level handlers:
+
+```typescript
+import { begin, FetchRequestAdapter } from 'flow-conductor';
+
+const adapter = new FetchRequestAdapter();
+
+await begin(
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    errorHandler: (error) => {
+      // This handler is called if the first stage fails
+      console.error('Failed to fetch user:', error.message);
+      // Perform stage-specific error handling (logging, cleanup, etc.)
+    }
+  },
+  adapter
+)
+  .next({
+    config: { url: 'https://api.example.com/users/1/posts', method: 'GET' },
+    errorHandler: (error) => {
+      // This handler is called if the second stage fails
+      console.error('Failed to fetch posts:', error.message);
+    }
+  })
+  .execute()
+  .catch(() => {
+    // Handle promise rejection if needed
+  });
+```
+
+**Key differences:**
+- **Chain-level handlers** (`withErrorHandler()`) handle errors for the entire chain
+- **Stage-level handlers** (`errorHandler` property) handle errors for specific stages
+- Stage-level handlers are called **before** chain-level handlers
+- Stage-level handlers are useful for stage-specific error handling, logging, or cleanup
+
+##### Async Error Handlers
+
+Both chain-level and stage-level error handlers support async operations:
+
+```typescript
+await begin(
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    errorHandler: async (error) => {
+      // Perform async error handling
+      await logErrorToService('user-fetch', error);
+      await sendNotification('User fetch failed', error.message);
+    }
+  },
+  adapter
+).execute();
+```
+
+##### Error Handler Execution Order
+
+When an error occurs, handlers are called in this order:
+
+1. **Stage-level error handler** (if the failing stage has one)
+2. **Chain-level error handler** (if set via `.withErrorHandler()`)
+3. Error is thrown (can be caught with `.catch()`)
+
+```typescript
+await begin(
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    errorHandler: (error) => {
+      console.log('1. Stage-level handler called');
+    }
+  },
+  adapter
+)
+  .withErrorHandler((error) => {
+    console.log('2. Chain-level handler called');
+  })
+  .execute()
+  .catch((error) => {
+    console.log('3. Promise rejection caught');
+  });
+```
+
+##### Error Handler with Retry
+
+Stage-level error handlers work seamlessly with retry mechanisms. The error handler is called **after** all retry attempts are exhausted:
+
+```typescript
+await begin(
+  {
+    config: { url: 'https://api.example.com/users', method: 'GET' },
+    retry: {
+      maxRetries: 3,
+      retryDelay: 1000,
+    },
+    errorHandler: (error) => {
+      // Called after all retries are exhausted
+      console.error('Request failed after 3 retries:', error.message);
+      // Log final failure, perform cleanup, etc.
+    }
+  },
+  adapter
+).execute();
+```
+
+##### Error Handler with Mapper
+
+If an error occurs before a mapper executes, the error handler is called and the mapper is skipped:
+
+```typescript
+await begin(
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => {
+      // This won't be called if the request fails
+      return await result.json();
+    },
+    errorHandler: (error) => {
+      // This is called if the request fails (before mapper)
+      console.error('Request failed, mapper skipped:', error.message);
+    }
+  },
+  adapter
+).execute();
+```
+
+##### Error Handler with Result Interceptor
+
+If an error occurs, the error handler is called and the result interceptor is skipped:
+
+```typescript
+await begin(
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    resultInterceptor: (result) => {
+      // This won't be called if the request fails
+      console.log('Request succeeded:', result);
+    },
+    errorHandler: (error) => {
+      // This is called if the request fails (before interceptor)
+      console.error('Request failed, interceptor skipped:', error.message);
+    }
+  },
+  adapter
+).execute();
+```
+
+##### Error Handler with Precondition
+
+Error handlers are only called if a stage actually executes. If a stage is skipped due to a precondition returning `false`, the error handler is not called:
+
+```typescript
+await begin(
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    precondition: () => false, // Stage is skipped
+    errorHandler: (error) => {
+      // This will never be called because the stage is skipped
+    }
+  },
+  adapter
+).execute();
+```
+
+##### Accessing Error Properties
+
+Error handlers receive the full error object, allowing you to access custom properties:
+
+```typescript
+const customError = new Error('Custom error');
+(customError as any).code = 'ERR_CUSTOM';
+(customError as any).statusCode = 500;
+
+await begin(
+  {
+    config: { url: 'https://api.example.com/users', method: 'GET' },
+    errorHandler: (error) => {
+      console.error('Error code:', (error as any).code);
+      console.error('Status code:', (error as any).statusCode);
+      console.error('Message:', error.message);
+    }
+  },
+  adapter
+).execute();
 ```
 
 #### Finish Handler
@@ -1687,6 +1881,12 @@ console.log({ user, posts, comments });
 
 ### Error Recovery
 
+Flow-conductor provides multiple ways to handle errors:
+
+#### Chain-Level Error Recovery
+
+Handle errors for the entire chain:
+
 ```typescript
 import { begin, FetchRequestAdapter } from 'flow-conductor';
 
@@ -1710,6 +1910,81 @@ try {
   // Handle final error if needed
   console.error('Chain execution failed:', error);
 }
+```
+
+#### Stage-Level Error Recovery
+
+Handle errors for individual stages with stage-specific recovery logic:
+
+```typescript
+import { begin, FetchRequestAdapter } from 'flow-conductor';
+
+const adapter = new FetchRequestAdapter();
+
+try {
+  const result = await begin(
+    {
+      config: { url: 'https://api.example.com/users/1', method: 'GET' },
+      errorHandler: async (error) => {
+        // Stage-specific error handling
+        console.error('Failed to fetch user:', error.message);
+        await logError('user-fetch', error);
+      }
+    },
+    adapter
+  )
+    .next({
+      config: { url: 'https://api.example.com/users/1/posts', method: 'GET' },
+      errorHandler: async (error) => {
+        // Different handling for posts stage
+        console.error('Failed to fetch posts:', error.message);
+        await logError('posts-fetch', error);
+        // Could perform stage-specific cleanup or fallback
+      }
+    })
+    .withErrorHandler((error) => {
+      // Chain-level handler called after stage handlers
+      console.error('Chain failed:', error.message);
+    })
+    .execute();
+  
+  console.log(await result.json());
+} catch (error) {
+  // Final error handling
+  console.error('Execution failed:', error);
+}
+```
+
+#### Combining Stage and Chain Error Handlers
+
+Use both stage-level and chain-level handlers for comprehensive error handling:
+
+```typescript
+const result = await begin(
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    errorHandler: (error) => {
+      // Stage-specific: log, cleanup, or perform recovery
+      console.error('User fetch failed:', error);
+      // Could return a default value or perform fallback logic
+    }
+  },
+  adapter
+)
+  .next({
+    config: { url: 'https://api.example.com/users/1/posts', method: 'GET' },
+    errorHandler: (error) => {
+      // Stage-specific: handle posts fetch failure
+      console.error('Posts fetch failed:', error);
+    }
+  })
+  .withErrorHandler((error) => {
+    // Chain-level: centralized error handling
+    // Called after stage handlers
+    metrics.increment('chain.errors');
+    notifyAdmin('Chain execution failed', error);
+  })
+  .execute();
 ```
 
 ### Retry with Exponential Backoff
@@ -1816,6 +2091,7 @@ interface PipelineRequestStage<Result, Out = Result, AdapterRequestConfig extend
   precondition?: () => boolean;
   mapper?: (result: Result) => Out | Promise<Out>;
   resultInterceptor?: (result: Out) => void | Promise<void>; // Optional result interceptor for side effects
+  errorHandler?: (error: Error) => void | Promise<void>; // Optional error handler for stage-specific error handling
   retry?: RetryConfig; // Optional retry configuration
   chunkProcessing?: ChunkProcessingConfig; // Optional chunk processing configuration
 }
@@ -1841,6 +2117,7 @@ interface PipelineManagerStage<Out, AdapterExecutionResult, AdapterRequestConfig
   precondition?: () => boolean;
   mapper?: (result: Out) => Out | Promise<Out>;
   resultInterceptor?: (result: Out) => void | Promise<void>; // Optional result interceptor for side effects
+  errorHandler?: (error: Error) => void | Promise<void>; // Optional error handler for stage-specific error handling
 }
 ```
 
