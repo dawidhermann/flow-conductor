@@ -83,12 +83,14 @@ export default class RequestChain<
       | PipelineRequestStage<
           AdapterExecutionResult,
           NewOut,
-          AdapterRequestConfig
+          AdapterRequestConfig,
+          Out
         >
       | PipelineManagerStage<
           NewOut,
           AdapterExecutionResult,
-          AdapterRequestConfig
+          AdapterRequestConfig,
+          Out
         >
   ): RequestChain<
     NewOut,
@@ -167,17 +169,19 @@ export default class RequestChain<
    * @param stage - The pipeline stage to add
    * @returns A new RequestChain instance with updated types
    */
-  private addRequestEntity = <NewOut>(
+  private addRequestEntity = <NewOut, PrevOut = Out>(
     stage:
       | PipelineRequestStage<
           AdapterExecutionResult,
           NewOut,
-          AdapterRequestConfig
+          AdapterRequestConfig,
+          PrevOut
         >
       | PipelineManagerStage<
           NewOut,
           AdapterExecutionResult,
-          AdapterRequestConfig
+          AdapterRequestConfig,
+          PrevOut
         >
   ): RequestChain<
     NewOut,

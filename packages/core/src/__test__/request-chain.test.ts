@@ -2147,4 +2147,70 @@ describe("Mapper with prev parameter", () => {
       .execute();
     assert.strictEqual(result, "Previous was: John Smith");
   });
+
+  test("Accumulator pattern - passing context through stages", async () => {
+    resetFetchMock();
+    fetchMock
+      .once(JSON.stringify(firstUser))
+      .once(JSON.stringify([{ id: 1, total: 100 }]))
+      .once(JSON.stringify({ success: true }));
+    const result = await RequestChain.begin<
+      { user: typeof firstUser },
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+        mapper: async (result: Response) => {
+          const user = JSON.parse(result.body as any);
+          return { user };
+        },
+      },
+      new TestAdapter()
+    )
+      .next<{
+        user: typeof firstUser;
+        orders: Array<{ id: number; total: number }>;
+      }>({
+        config: (prev) => {
+          // prev should be { user: typeof firstUser }
+          assert.ok(prev?.user);
+          assert.strictEqual(prev?.user.id, 1);
+          return {
+            url: `http://example.com/users/${prev?.user.id}/orders`,
+            method: "GET",
+          };
+        },
+        mapper: async (result: Response, prev) => {
+          // prev should be { user: typeof firstUser }
+          assert.ok(prev?.user);
+          const orders = JSON.parse(result.body as any);
+          return {
+            ...prev, // Keep user data
+            orders,
+          };
+        },
+      })
+      .next<{
+        user: typeof firstUser;
+        orders: Array<{ id: number; total: number }>;
+      }>({
+        config: (prev) => {
+          // prev should be { user: typeof firstUser, orders: Array }
+          assert.ok(prev?.user);
+          assert.ok(prev?.orders);
+          assert.strictEqual(prev?.orders.length, 1);
+          return { url: "http://example.com/final-step", method: "POST" };
+        },
+        mapper: async (result: Response, prev) => {
+          // Return the accumulated result (prev) instead of the raw response
+          return prev!;
+        },
+      })
+      .execute();
+    assert.ok(result.user);
+    assert.ok(result.orders);
+    assert.strictEqual(result.user.id, 1);
+    assert.strictEqual(result.orders.length, 1);
+  });
 });
