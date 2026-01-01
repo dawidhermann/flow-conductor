@@ -1,0 +1,31 @@
+{
+  "name": "flow-conductor-axios-example",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Example project demonstrating flow-conductor with axios adapter using JSONPlaceholder API",
+  "main": "index.js",
+  "scripts": {
+    "start": "tsx index.ts",
+    "dev": "tsx watch index.ts"
+  },
+  "keywords": [
+    "flow-conductor",
+    "axios",
+    "example",
+    "http",
+    "api"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@flow-conductor/core": "^1.0.0",
+    "@flow-conductor/adapter-axios": "^1.0.0",
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.9.3"
+  }
+}
+
