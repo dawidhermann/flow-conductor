@@ -84,14 +84,20 @@ async function processStripeWebhook(body: string, signature: string) {
         url: '/webhooks/stripe/validate',
         method: 'POST',
         data: { body, signature }
+      },
+      mapper: async (response) => {
+        // Extract validated event from validation response
+        const validation = await response.json();
+        return validation.event; // Return the validated event object
       }
     },
     adapter
   )
     .next({
       config: async (prev) => {
-        const event = JSON.parse(body);
-        return { url: `/orders/by-payment/${event.data.object.id}` };
+        // prev is the validated event from step 1
+        // This demonstrates sequential dependency - step 2 uses step 1's result
+        return { url: `/orders/by-payment/${prev.data.object.id}` };
       }
     })
     .next({
@@ -199,10 +205,18 @@ console.log(await result.json());
 
 ### Type Safety Across Steps
 ```typescript
+begin(
+  {
+    config: { url: '/api/users/1', method: 'GET' },
+    mapper: async (response) => await response.json() // Extract JSON data
+  },
+  adapter
+)
 .next({
   config: (prev) => {
     // prev is typed based on previous mapper!
-    prev.userId // ← TypeScript knows this exists
+    // TypeScript knows prev has userId because mapper returned the JSON object
+    return { url: `/api/posts?userId=${prev.userId}` };
   }
 })
 ```
