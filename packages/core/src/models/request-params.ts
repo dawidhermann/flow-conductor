@@ -129,8 +129,9 @@ export interface RetryConfig {
  *
  * @template Result - The type of result from the stage
  * @template Out - The output type after mapping (defaults to Result)
+ * @template PrevOut - The output type of the previous stage (defaults to Out for backward compatibility)
  */
-export interface BasePipelineStage<Result, Out = Result> {
+export interface BasePipelineStage<Result, Out = Result, PrevOut = Out> {
   /**
    * Optional precondition function. If provided and returns false, the stage will be skipped.
    */
@@ -142,8 +143,10 @@ export interface BasePipelineStage<Result, Out = Result> {
   /**
    * Optional mapper function to transform the stage result.
    * Can return a value or a promise.
+   * @param result - The result from the current stage
+   * @param prev - The result from the previous stage (undefined for the first stage)
    */
-  mapper?: (result: Result) => Out | Promise<Out>;
+  mapper?: (result: Result, prev?: PrevOut) => Out | Promise<Out>;
 
   /**
    * Optional result interceptor function to process the stage result.
@@ -214,19 +217,21 @@ export interface ChunkProcessingConfig<Chunk = string | Uint8Array> {
  * @template Result - The type of result from the adapter
  * @template Out - The output type after mapping (defaults to Result)
  * @template AdapterRequestConfig - The type of request configuration
+ * @template PrevOut - The output type of the previous stage (defaults to Out for backward compatibility)
  */
 export interface PipelineRequestStage<
   Result,
   Out = Result,
   AdapterRequestConfig extends IRequestConfig = IRequestConfig,
-> extends BasePipelineStage<Result, Out> {
+  PrevOut = Out,
+> extends BasePipelineStage<Result, Out, PrevOut> {
   /**
    * Request configuration. Can be a static config object or a factory function
    * that creates the config based on previous results.
    */
   config:
     | AdapterRequestConfig
-    | IRequestConfigFactory<Result, AdapterRequestConfig>;
+    | IRequestConfigFactory<PrevOut, AdapterRequestConfig>;
   /**
    * Optional retry configuration for handling request failures.
    * Only applies to request stages, not nested manager stages.
@@ -246,12 +251,14 @@ export interface PipelineRequestStage<
  * @template Out - The output type of the nested request flow
  * @template AdapterExecutionResult - The type of result returned by the adapter
  * @template AdapterRequestConfig - The type of request configuration
+ * @template PrevOut - The output type of the previous stage (defaults to Out for backward compatibility)
  */
 export interface PipelineManagerStage<
   Out,
   AdapterExecutionResult,
   AdapterRequestConfig extends IRequestConfig = IRequestConfig,
-> extends BasePipelineStage<Out> {
+  PrevOut = Out,
+> extends BasePipelineStage<Out, Out, PrevOut> {
   /**
    * The nested request flow to execute
    */

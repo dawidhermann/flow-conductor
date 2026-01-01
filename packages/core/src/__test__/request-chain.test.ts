@@ -1849,3 +1849,302 @@ describe("Coverage improvement tests", () => {
     assert.ok(result);
   });
 });
+
+describe("Mapper with prev parameter", () => {
+  test("Mapper receives undefined prev for first stage", async () => {
+    resetFetchMock();
+    fetchMock.once(JSON.stringify(firstUser));
+    let prevReceived: unknown = null;
+    const result = await RequestChain.begin<
+      typeof firstUser,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+        mapper: (result: Response, prev) => {
+          prevReceived = prev;
+          return JSON.parse(result.body as any);
+        },
+      },
+      new TestAdapter()
+    ).execute();
+    assert.strictEqual(prevReceived, undefined);
+    assert.deepStrictEqual(result, firstUser);
+  });
+
+  test("Mapper receives previous result in second stage", async () => {
+    resetFetchMock();
+    fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(secondUser));
+    let prevReceived: unknown = null;
+    const result = await RequestChain.begin<
+      typeof firstUser,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+        mapper: (result: Response) => JSON.parse(result.body as any),
+      },
+      new TestAdapter()
+    )
+      .next<typeof secondUser>({
+        config: { url: "http://example.com/users/2", method: "GET" },
+        mapper: (result: Response, prev) => {
+          prevReceived = prev;
+          return JSON.parse(result.body as any);
+        },
+      })
+      .execute();
+    assert.deepStrictEqual(prevReceived, firstUser);
+    assert.deepStrictEqual(result, secondUser);
+  });
+
+  test("Mapper can use prev parameter to transform result", async () => {
+    resetFetchMock();
+    fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(secondUser));
+    const result = await RequestChain.begin<
+      typeof firstUser,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+        mapper: (result: Response) => JSON.parse(result.body as any),
+      },
+      new TestAdapter()
+    )
+      .next<{ combined: string }>({
+        config: { url: "http://example.com/users/2", method: "GET" },
+        mapper: (result: Response, prev) => {
+          const current = JSON.parse(result.body as any);
+          return {
+            combined: `${prev?.name} and ${current.name}`,
+          };
+        },
+      })
+      .execute();
+    assert.strictEqual(result.combined, "John Smith and Bruce Wayne");
+  });
+
+  test("Mapper receives correct prev through multiple stages", async () => {
+    resetFetchMock();
+    fetchMock
+      .once(JSON.stringify(firstUser))
+      .once(JSON.stringify(secondUser))
+      .once(JSON.stringify(thirdUser));
+    const prevValues: unknown[] = [];
+    const result = await RequestChain.begin<
+      typeof firstUser,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+        mapper: (result: Response) => JSON.parse(result.body as any),
+      },
+      new TestAdapter()
+    )
+      .next<typeof secondUser>({
+        config: { url: "http://example.com/users/2", method: "GET" },
+        mapper: (result: Response, prev) => {
+          prevValues.push(prev);
+          return JSON.parse(result.body as any);
+        },
+      })
+      .next<typeof thirdUser>({
+        config: { url: "http://example.com/users/3", method: "GET" },
+        mapper: (result: Response, prev) => {
+          prevValues.push(prev);
+          return JSON.parse(result.body as any);
+        },
+      })
+      .execute();
+    assert.strictEqual(prevValues.length, 2);
+    assert.deepStrictEqual(prevValues[0], firstUser);
+    assert.deepStrictEqual(prevValues[1], secondUser);
+    assert.deepStrictEqual(result, thirdUser);
+  });
+
+  test("Async mapper can use prev parameter", async () => {
+    resetFetchMock();
+    fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(secondUser));
+    const result = await RequestChain.begin<
+      typeof firstUser,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+        mapper: async (result: Response) => {
+          const data = await JSON.parse(result.body as any);
+          return data;
+        },
+      },
+      new TestAdapter()
+    )
+      .next<string>({
+        config: { url: "http://example.com/users/2", method: "GET" },
+        mapper: async (result: Response, prev) => {
+          const current = await JSON.parse(result.body as any);
+          return `${prev?.name} -> ${current.name}`;
+        },
+      })
+      .execute();
+    assert.strictEqual(result, "John Smith -> Bruce Wayne");
+  });
+
+  test("Mapper with prev works with different output types", async () => {
+    resetFetchMock();
+    fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(secondUser));
+    const result = await RequestChain.begin<
+      typeof firstUser,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+        mapper: (result: Response) => JSON.parse(result.body as any),
+      },
+      new TestAdapter()
+    )
+      .next<number>({
+        config: { url: "http://example.com/users/2", method: "GET" },
+        mapper: (result: Response, prev) => {
+          // prev should be firstUser type
+          return prev?.id || 0;
+        },
+      })
+      .execute();
+    assert.strictEqual(result, 1);
+  });
+
+  test("Mapper prev is undefined when previous stage is skipped", async () => {
+    resetFetchMock();
+    fetchMock.once(JSON.stringify(thirdUser));
+    let prevReceived: unknown = null;
+    const result = await RequestChain.begin<
+      TestRequestResult<typeof firstUser>,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+        precondition: () => false, // Skip first stage
+      },
+      new TestAdapter()
+    )
+      .next<typeof thirdUser>({
+        config: { url: "http://example.com/users/3", method: "GET" },
+        mapper: (result: Response, prev) => {
+          prevReceived = prev;
+          return JSON.parse(result.body as any);
+        },
+      })
+      .execute();
+    assert.strictEqual(prevReceived, undefined);
+    assert.deepStrictEqual(result, thirdUser);
+  });
+
+  test("Mapper prev receives previous mapped result, not raw result", async () => {
+    resetFetchMock();
+    fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(secondUser));
+    const result = await RequestChain.begin<string, Response, IRequestConfig>(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+        mapper: (result: Response) => {
+          const data = JSON.parse(result.body as any);
+          return data.name; // Return only name string
+        },
+      },
+      new TestAdapter()
+    )
+      .next<typeof secondUser>({
+        config: { url: "http://example.com/users/2", method: "GET" },
+        mapper: (result: Response, prev) => {
+          // prev should be the mapped result (string), not the raw Response
+          assert.strictEqual(typeof prev, "string");
+          assert.strictEqual(prev, "John Smith");
+          return JSON.parse(result.body as any);
+        },
+      })
+      .execute();
+    assert.deepStrictEqual(result, secondUser);
+  });
+
+  test("Mapper prev works with PipelineManagerStage", async () => {
+    resetFetchMock();
+    fetchMock
+      .once(JSON.stringify(firstUser)) // Mock for first stage
+      .once(JSON.stringify(firstUser)); // Mock for nested chain
+    const nestedChain = RequestChain.begin<
+      typeof firstUser,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+        mapper: (result: Response) => JSON.parse(result.body as any),
+      },
+      new TestAdapter()
+    );
+    let prevReceived: unknown = null;
+    const result = await RequestChain.begin<
+      typeof firstUser,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/0", method: "GET" },
+        mapper: (result: Response) => JSON.parse(result.body as any),
+      },
+      new TestAdapter()
+    )
+      .next<string>({
+        request: nestedChain,
+        mapper: (result, prev) => {
+          // result is typeof firstUser (from nested chain)
+          // prev is typeof firstUser (from previous stage)
+          prevReceived = prev;
+          return result.name;
+        },
+      })
+      .execute();
+    assert.deepStrictEqual(prevReceived, firstUser);
+    assert.strictEqual(result, "John Smith");
+  });
+
+  test("Mapper prev accumulates through multiple transformations", async () => {
+    resetFetchMock();
+    fetchMock
+      .once(JSON.stringify(firstUser))
+      .once(JSON.stringify(secondUser))
+      .once(JSON.stringify(thirdUser));
+    const result = await RequestChain.begin<
+      typeof firstUser,
+      Response,
+      IRequestConfig
+    >(
+      {
+        config: { url: "http://example.com/users/1", method: "GET" },
+        mapper: (result: Response) => JSON.parse(result.body as any),
+      },
+      new TestAdapter()
+    )
+      .next<string>({
+        config: { url: "http://example.com/users/2", method: "GET" },
+        mapper: (result: Response, prev) => {
+          return prev?.name || "";
+        },
+      })
+      .next<string>({
+        config: { url: "http://example.com/users/3", method: "GET" },
+        mapper: (result: Response, prev) => {
+          // prev should be the string from previous mapper
+          return `Previous was: ${prev}`;
+        },
+      })
+      .execute();
+    assert.strictEqual(result, "Previous was: John Smith");
+  });
+});

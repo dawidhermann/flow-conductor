@@ -244,11 +244,13 @@ export default class RequestChain<
           let mappedResult: Out | Promise<Out>;
           if (isPipelineRequestStage(requestEntity)) {
             mappedResult = requestEntity.mapper(
-              requestResult as unknown as AdapterExecutionResult
+              requestResult as unknown as AdapterExecutionResult,
+              previousResult
             );
           } else if (isPipelineManagerStage(requestEntity)) {
             mappedResult = requestEntity.mapper(
-              requestResult as unknown as Out
+              requestResult as unknown as Out,
+              previousResult
             );
           } else {
             mappedResult = result;
@@ -297,9 +299,7 @@ export default class RequestChain<
       const { config, retry, chunkProcessing } = requestEntity;
       const requestConfig: AdapterRequestConfig =
         typeof config === "function"
-          ? (config(
-              previousResult as AdapterExecutionResult
-            ) as AdapterRequestConfig)
+          ? (config(previousResult as Out) as AdapterRequestConfig)
           : (config as AdapterRequestConfig);
 
       // If retry config is provided, wrap execution in retry logic
@@ -514,14 +514,26 @@ function isPipelineRequestStage<
   Out,
   AdapterExecutionResult,
   AdapterRequestConfig extends IRequestConfig = IRequestConfig,
+  PrevOut = Out,
 >(
   stage:
-    | PipelineRequestStage<AdapterExecutionResult, Out, AdapterRequestConfig>
-    | PipelineManagerStage<Out, AdapterExecutionResult, AdapterRequestConfig>
+    | PipelineRequestStage<
+        AdapterExecutionResult,
+        Out,
+        AdapterRequestConfig,
+        PrevOut
+      >
+    | PipelineManagerStage<
+        Out,
+        AdapterExecutionResult,
+        AdapterRequestConfig,
+        PrevOut
+      >
 ): stage is PipelineRequestStage<
   AdapterExecutionResult,
   Out,
-  AdapterRequestConfig
+  AdapterRequestConfig,
+  PrevOut
 > {
   return "config" in stage && !("request" in stage);
 }
@@ -532,6 +544,7 @@ function isPipelineRequestStage<
  * @template Out - The output type
  * @template AdapterExecutionResult - The adapter execution result type
  * @template AdapterRequestConfig - The request configuration type
+ * @template PrevOut - The previous output type (defaults to Out)
  * @param stage - The stage to check
  * @returns True if the stage is a PipelineManagerStage
  */
@@ -539,14 +552,26 @@ function isPipelineManagerStage<
   Out,
   AdapterExecutionResult,
   AdapterRequestConfig extends IRequestConfig = IRequestConfig,
+  PrevOut = Out,
 >(
   stage:
-    | PipelineRequestStage<AdapterExecutionResult, Out, AdapterRequestConfig>
-    | PipelineManagerStage<Out, AdapterExecutionResult, AdapterRequestConfig>
+    | PipelineRequestStage<
+        AdapterExecutionResult,
+        Out,
+        AdapterRequestConfig,
+        PrevOut
+      >
+    | PipelineManagerStage<
+        Out,
+        AdapterExecutionResult,
+        AdapterRequestConfig,
+        PrevOut
+      >
 ): stage is PipelineManagerStage<
   Out,
   AdapterExecutionResult,
-  AdapterRequestConfig
+  AdapterRequestConfig,
+  PrevOut
 > {
   return "request" in stage && !("config" in stage);
 }

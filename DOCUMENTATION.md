@@ -452,6 +452,14 @@ const deleteResult = await begin(
 ).execute();
 ```
 
+### 🚀 Production Checklist
+
+Before deploying to production, make sure you've addressed these critical items:
+
+- **Timeouts**: Did you configure a timeout? (Default is infinite!)
+- **Private IPs**: Are you running in Kubernetes/Docker? Set `allowPrivateIPs: true`.
+- **Error Handling**: Do you have a `.catch()` or `.withErrorHandler()` at the end of your chain?
+
 ## Advanced Features
 
 ### Handlers
