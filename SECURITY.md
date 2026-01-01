@@ -55,22 +55,32 @@ By default, all adapters validate URLs before making requests:
 - ✅ **Restricts protocols**: Only `http://` and `https://` are allowed
 - ✅ **Validates URL format**: Ensures URLs are properly formatted
 
+**⚠️ IMPORTANT: Backend Usage Consideration**
+
+flow-conductor is designed for backend API services and microservice orchestration. In backend environments (Kubernetes, AWS VPC, Docker networks), services communicate using private IP addresses. The default blocking of private IPs will prevent the library from working in most enterprise infrastructure scenarios.
+
+**Recommendation**: For Node.js backend environments where you control the URLs being requested (not user-provided URLs), enable `allowPrivateIPs: true` by default. Only keep the private IP blocking enabled when the library acts as a proxy for URLs provided by end users, where SSRF protection is critical.
+
 #### Configuration
 
-For development or testing scenarios, you can configure validation:
+For backend services and internal microservice communication, configure validation appropriately:
 
 ```typescript
 import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
+
+// Recommended for backend services (Kubernetes, VPC, Docker networks)
+const backendAdapter = new FetchRequestAdapter({
+  allowPrivateIPs: true  // Required for internal service communication
+});
 
 // Allow localhost for local development
 const devAdapter = new FetchRequestAdapter({
   allowLocalhost: true
 });
 
-// Allow private IPs (use with extreme caution)
-const internalAdapter = new FetchRequestAdapter({
-  allowPrivateIPs: true
-});
+// For user-facing proxies (where SSRF protection is critical)
+// Keep default blocking enabled - do NOT set allowPrivateIPs: true
+const proxyAdapter = new FetchRequestAdapter();
 
 // Custom protocol allowlist
 const customAdapter = new FetchRequestAdapter({
