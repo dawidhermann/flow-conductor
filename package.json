@@ -66,7 +66,15 @@
     "format": "prettier --write \"index.ts\" \"packages/**/*.ts\"",
     "format:check": "prettier --check \"index.ts\" \"packages/**/*.ts\"",
     "type-check": "npm run type-check --workspaces && tsc --noEmit",
-    "prepublishOnly": "npm run clean && npm run lint && npm run type-check && npm run build"
+    "prepublishOnly": "npm run clean && npm run lint && npm run type-check && npm run build",
+    "publish:all": "npm run publish:core && npm run publish:adapters && npm run publish:root",
+    "publish:core": "cd packages/core && npm publish",
+    "publish:adapters": "npm run publish:adapter-fetch && npm run publish:adapter-node-fetch && npm run publish:adapter-axios && npm run publish:adapter-superagent",
+    "publish:adapter-fetch": "cd packages/adapter-fetch && npm publish",
+    "publish:adapter-node-fetch": "cd packages/adapter-node-fetch && npm publish",
+    "publish:adapter-axios": "cd packages/adapter-axios && npm publish",
+    "publish:adapter-superagent": "cd packages/adapter-superagent && npm publish",
+    "publish:root": "npm publish"
   },
   "author": "Dawid Hermann",
   "license": "MIT",

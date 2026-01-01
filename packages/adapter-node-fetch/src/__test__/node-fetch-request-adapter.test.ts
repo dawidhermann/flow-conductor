@@ -367,8 +367,8 @@ describe("NodeFetchRequestAdapter", () => {
         adapter
       )
         .next({
-          config: (previousResult: Response | undefined) => {
-            const user = previousResult as unknown as typeof firstUser;
+          config: (previousResult: typeof firstUser | undefined) => {
+            const user = previousResult!;
             return {
               url: `http://example.com/users/${user.id}/posts`,
               method: "GET",
