@@ -71,7 +71,7 @@ async function example1_SimpleChain() {
       adapter
     )
       .next({
-        config: (previousResult: Post) => {
+        config: (previousResult?: Post) => {
           const post = previousResult;
           if (!post) {
             throw new Error("No post found");
@@ -124,7 +124,7 @@ async function example2_MultiStepChain() {
       adapter
     )
       .next({
-        config: (previousResult: User) => {
+        config: (previousResult?: User) => {
           const user = previousResult;
           if (!user) {
             throw new Error("No user found");
@@ -142,7 +142,7 @@ async function example2_MultiStepChain() {
         },
       })
       .next({
-        config: (previousResult: Post[]) => {
+        config: (previousResult?: Post[]) => {
           const posts = previousResult;
           if (!posts) {
             throw new Error("No posts found");
@@ -209,7 +209,7 @@ async function example3_PostRequest() {
       adapter
     )
       .next({
-        config: (previousResult: Post) => {
+        config: (previousResult?: Post) => {
           const newPost = previousResult;
           if (!newPost) {
             throw new Error("No new post found");
@@ -305,7 +305,7 @@ async function example5_ConditionalChain() {
       adapter
     )
       .next({
-        config: (previousResult: Post[]) => {
+        config: (previousResult?: Post[]) => {
           const posts = previousResult;
           if (!posts) {
             throw new Error("No posts found");
