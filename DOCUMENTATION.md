@@ -1400,7 +1400,382 @@ await begin(
   .executeAll();
 ```
 
+### RequestBatch
+
+`RequestBatch` allows you to execute multiple requests in parallel (or with a concurrency limit). Unlike `RequestChain`, which executes requests sequentially, `RequestBatch` executes all requests simultaneously and returns an array of results.
+
+#### Basic RequestBatch Usage
+
+Execute multiple requests in parallel:
+
+```typescript
+import { batch } from '@flow-conductor/core';
+import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
+
+const adapter = new FetchRequestAdapter();
+
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' }
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' }
+  },
+  {
+    config: { url: 'https://api.example.com/users/3', method: 'GET' }
+  }
+], adapter);
+
+// Execute all requests in parallel
+const results = await batchInstance.execute();
+console.log(results.length); // 3
+console.log(await results[0].json()); // First user
+console.log(await results[1].json()); // Second user
+console.log(await results[2].json()); // Third user
+```
+
+#### Concurrency Limiting
+
+Control how many requests execute simultaneously using `withConcurrency()`:
+
+```typescript
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' }
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' }
+  },
+  {
+    config: { url: 'https://api.example.com/users/3', method: 'GET' }
+  }
+], adapter);
+batchInstance.withConcurrency(2); // Execute max 2 requests at a time
+
+const results = await batchInstance.execute();
+// Requests execute in batches: [1, 2] then [3]
+```
+
+#### RequestBatch with Mappers
+
+Transform results from each request in the batch:
+
+```typescript
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => {
+      const data = await result.json();
+      return data; // Return parsed user object
+    }
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' },
+    mapper: async (result) => {
+      const data = await result.json();
+      return data;
+    }
+  }
+], adapter);
+
+const users = await batchInstance.execute();
+console.log(users[0].name); // "John Doe"
+console.log(users[1].name); // "Jane Doe"
+```
+
+#### RequestBatch with Error Handling
+
+Handle errors for the entire batch or individual requests:
+
+```typescript
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    errorHandler: (error) => {
+      console.error('Failed to fetch user 1:', error.message);
+    }
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' }
+  }
+], adapter);
+
+batchInstance.withErrorHandler((error) => {
+  console.error('Batch execution failed:', error.message);
+});
+
+const results = await batchInstance.execute();
+```
+
+#### RequestBatch with Result Handlers
+
+Handle successful batch execution:
+
+```typescript
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' }
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' }
+  }
+], adapter);
+
+batchInstance.withResultHandler(async (results) => {
+  console.log(`Successfully fetched ${results.length} users`);
+  for (const result of results) {
+    const user = await result.json();
+    console.log(`User: ${user.name}`);
+  }
+});
+
+await batchInstance.execute();
+```
+
 ### Nested Request Managers
+
+Flow-conductor supports nesting `RequestBatch` inside `RequestChain` and `RequestChain` inside `RequestBatch`. This allows you to combine sequential and parallel execution patterns in powerful ways.
+
+#### Nesting RequestBatch inside RequestChain
+
+Execute a batch of parallel requests as a stage in a sequential chain:
+
+```typescript
+import { begin, batch } from '@flow-conductor/core';
+import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
+
+const adapter = new FetchRequestAdapter();
+
+// Create a batch that fetches multiple users in parallel
+const userBatch = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => await result.json()
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' },
+    mapper: async (result) => await result.json()
+  }
+], adapter);
+
+// Chain that uses the batch, then processes the results
+const result = await begin(
+  {
+    request: userBatch // Nested batch executes first
+  },
+  adapter
+)
+  .next({
+    config: async (previousResult) => {
+      // previousResult is the array of users from the batch
+      const userIds = previousResult.map(user => user.id).join(',');
+      return {
+        url: `https://api.example.com/posts?userIds=${userIds}`,
+        method: 'GET'
+      };
+    }
+  })
+  .execute();
+
+const posts = await result.json();
+console.log(posts);
+```
+
+#### Nesting RequestBatch with Mapper
+
+Transform the batch result before passing it to the next stage:
+
+```typescript
+const userBatch = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => await result.json()
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' },
+    mapper: async (result) => await result.json()
+  }
+], adapter);
+
+const result = await begin(
+  {
+    request: userBatch,
+    mapper: (users: User[]) => {
+      // Transform batch result - extract user names
+      return users.map(user => user.name).join(', ');
+    }
+  },
+  adapter
+)
+  .next({
+    config: (previousResult) => {
+      // previousResult is now the string "John Doe, Jane Doe"
+      return {
+        url: `https://api.example.com/search?q=${previousResult}`,
+        method: 'GET'
+      };
+    }
+  })
+  .execute();
+```
+
+#### Nesting RequestBatch with Previous Result Dependency
+
+Use results from previous chain stages to build the batch:
+
+```typescript
+// First stage gets a user
+const result = await begin(
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => await result.json()
+  },
+  adapter
+)
+  .next({
+    config: async (previousResult) => {
+      // Create a batch that depends on the previous result
+      const userBatch = batch([
+        {
+          config: {
+            url: `https://api.example.com/users/${previousResult.id}/posts`,
+            method: 'GET'
+          },
+          mapper: async (result) => await result.json()
+        },
+        {
+          config: {
+            url: `https://api.example.com/users/${previousResult.id}/comments`,
+            method: 'GET'
+          },
+          mapper: async (result) => await result.json()
+        }
+      ], adapter);
+      
+      return { request: userBatch };
+    }
+  })
+  .next({
+    config: (previousResult) => {
+      // previousResult is the array from the nested batch
+      return {
+        url: 'https://api.example.com/process',
+        method: 'POST',
+        data: { posts: previousResult }
+      };
+    }
+  })
+  .execute();
+```
+
+#### Nesting RequestChain inside RequestBatch
+
+Execute multiple sequential chains in parallel:
+
+```typescript
+import { begin, batch } from '@flow-conductor/core';
+import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
+
+const adapter = new FetchRequestAdapter();
+
+// Create sequential chains
+const chain1 = begin(
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => await result.json()
+  },
+  adapter
+).next({
+  config: (prev) => ({
+    url: `https://api.example.com/users/${prev.id}/posts`,
+    method: 'GET'
+  }),
+  mapper: async (result) => await result.json()
+});
+
+const chain2 = begin(
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' },
+    mapper: async (result) => await result.json()
+  },
+  adapter
+).next({
+  config: (prev) => ({
+    url: `https://api.example.com/users/${prev.id}/posts`,
+    method: 'GET'
+  }),
+  mapper: async (result) => await result.json()
+});
+
+// Execute both chains in parallel
+const batchInstance = batch([
+  { request: chain1 },
+  { request: chain2 }
+], adapter);
+
+const results = await batchInstance.execute();
+// results[0] contains posts from user 1
+// results[1] contains posts from user 2
+```
+
+#### Nesting RequestChain with Concurrency Limit
+
+Control how many nested chains execute simultaneously:
+
+```typescript
+const batchInstance = batch([
+  { request: chain1 },
+  { request: chain2 },
+  { request: chain3 },
+  { request: chain4 }
+], adapter);
+batchInstance.withConcurrency(2); // Execute max 2 chains at a time
+
+const results = await batchInstance.execute();
+// Chains execute in batches: [chain1, chain2] then [chain3, chain4]
+```
+
+#### Deep Nesting
+
+You can nest multiple levels deep:
+
+```typescript
+// Batch within chain within batch
+const innerBatch = batch([
+  { config: { url: 'https://api.example.com/users/1', method: 'GET' } },
+  { config: { url: 'https://api.example.com/users/2', method: 'GET' } }
+], adapter);
+
+const middleChain = begin(
+  { request: innerBatch },
+  adapter
+).next({
+  config: (prev) => ({
+    url: 'https://api.example.com/process',
+    method: 'POST',
+    data: { users: prev }
+  })
+});
+
+const outerBatch = batch([
+  { request: middleChain },
+  {
+    config: { url: 'https://api.example.com/other', method: 'GET' }
+  }
+], adapter);
+
+const results = await outerBatch.execute();
+```
+
+#### Key Points About Nesting
+
+- **RequestBatch nested in RequestChain**: The batch executes and returns an array. The next stage receives this array as `previousResult`.
+- **RequestChain nested in RequestBatch**: The chain executes sequentially and returns its final result. The batch collects all chain results into an array.
+- **Mappers work at each level**: You can transform results at the batch level, chain level, or individual request level.
+- **Error handling**: Error handlers can be set at the batch level, chain level, or individual request level.
+- **Type safety**: TypeScript correctly infers types through nested structures.
+
+Chain request managers together. Nested chains can also use previous results:
 
 Chain request managers together. Nested chains can also use previous results:
 
@@ -2444,9 +2819,50 @@ The main class for creating and managing request chains.
 - `withErrorHandler(handler: ErrorHandler): RequestManager` - Set error handler
 - `withFinishHandler(handler: VoidFunction): RequestManager` - Set finish handler
 
+### RequestBatch
+
+A batch request manager that executes multiple requests in parallel (or with a concurrency limit). All requests are executed simultaneously (or in controlled batches), and results are returned as an array.
+
+#### Constructor
+
+- `new RequestBatch<Out, AdapterExecutionResult, RequestConfig>()` - Create a new RequestBatch instance
+  - `Out` - The output type (should be an array type, e.g., `User[]` for batches)
+  - `AdapterExecutionResult` - The type of result returned by the adapter
+  - `RequestConfig` - The type of request configuration
+
+#### Instance Methods
+
+- `setRequestAdapter(adapter: RequestAdapter): RequestBatch` - Set the request adapter
+- `addAll(stages: Array<PipelineRequestStage | PipelineManagerStage>): RequestBatch` - Add multiple requests to the batch
+- `withConcurrency(limit: number): RequestBatch` - Set the maximum number of concurrent requests (must be > 0)
+- `execute(): Promise<Out>` - Execute all requests in parallel (or with concurrency limit) and return all results as an array
+- `withResultHandler(handler: ResultHandler): RequestBatch` - Set result handler for successful batch execution
+- `withErrorHandler(handler: ErrorHandler): RequestBatch` - Set error handler for batch execution failures
+- `withFinishHandler(handler: VoidFunction): RequestBatch` - Set finish handler called after batch completion
+
+#### Example
+
+```typescript
+import { batch } from '@flow-conductor/core';
+import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
+
+const adapter = new FetchRequestAdapter();
+
+const batchInstance = batch([
+  { config: { url: 'https://api.example.com/users/1', method: 'GET' } },
+  { config: { url: 'https://api.example.com/users/2', method: 'GET' } },
+  { config: { url: 'https://api.example.com/users/3', method: 'GET' } }
+], adapter);
+batchInstance.withConcurrency(5); // Optional: limit concurrent requests
+
+const results = await batchInstance.execute();
+// Returns array of all results
+```
+
 ### Exported Functions
 
 - `begin<Out, AdapterExecutionResult, AdapterRequestConfig>(stage: PipelineRequestStage | PipelineManagerStage, adapter: RequestAdapter): RequestChain` - Alternative function to start a request chain (same as `RequestChain.begin`)
+- `batch<Out, AdapterExecutionResult, RequestConfig>(stages: Array<PipelineRequestStage | PipelineManagerStage>, adapter: RequestAdapter): RequestBatch` - Convenience function to create a RequestBatch with stages and adapter already configured
 
 ### Types
 

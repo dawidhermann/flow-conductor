@@ -12,6 +12,7 @@
 export { default as RequestAdapter } from "./request-adapter";
 export { default as RequestManager } from "./request-manager";
 export { default as RequestChain, begin } from "./request-chain";
+export { RequestBatch, batch } from "./request-batch";
 export { default } from "./request-chain";
 
 // Types

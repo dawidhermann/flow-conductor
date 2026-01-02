@@ -1,4 +1,5 @@
 import RequestFlow from "./request-manager";
+import type RequestAdapter from "./request-adapter";
 import type {
   IRequestConfig,
   PipelineRequestStage,
@@ -44,6 +45,58 @@ export class RequestBatch<
   AdapterExecutionResult = Out,
   RequestConfig extends IRequestConfig = IRequestConfig,
 > extends RequestFlow<Out, AdapterExecutionResult, RequestConfig> {
+  /**
+   * Creates a new RequestBatch with stages and adapter.
+   * This is the entry point for building a request batch.
+   *
+   * @template Out - The output type (should be an array type, e.g., `User[]` for batches)
+   * @template AdapterExecutionResult - The type of result returned by the adapter
+   * @template RequestConfig - The type of request configuration
+   * @param stages - Array of pipeline stages (request or manager stages)
+   * @param adapter - The request adapter to use for HTTP requests
+   * @returns A new RequestBatch instance with the stages and adapter configured
+   *
+   * @example
+   * ```typescript
+   * const batch = RequestBatch.batch(
+   *   [
+   *     { config: { url: '/api/users/1', method: 'GET' } },
+   *     { config: { url: '/api/users/2', method: 'GET' } },
+   *     { config: { url: '/api/users/3', method: 'GET' } }
+   *   ],
+   *   adapter
+   * );
+   *
+   * const results = await batch.execute();
+   * ```
+   */
+  public static batch = <
+    Out,
+    AdapterExecutionResult,
+    RequestConfig extends IRequestConfig = IRequestConfig,
+  >(
+    stages: Array<
+      | PipelineRequestStage<AdapterExecutionResult, Out, RequestConfig>
+      | PipelineManagerStage<Out, AdapterExecutionResult, RequestConfig>
+    >,
+    adapter: RequestAdapter<AdapterExecutionResult, RequestConfig>
+  ): RequestBatch<Out[], AdapterExecutionResult, RequestConfig> => {
+    const batch = new RequestBatch<
+      Out[],
+      AdapterExecutionResult,
+      RequestConfig
+    >();
+    batch.setRequestAdapter(adapter);
+    // Type assertion needed: stages return Out (element type), batch collects into Out[]
+    batch.addAll(
+      stages as Array<
+        | PipelineRequestStage<AdapterExecutionResult, Out[], RequestConfig>
+        | PipelineManagerStage<Out[], AdapterExecutionResult, RequestConfig>
+      >
+    );
+    return batch;
+  };
+
   /**
    * Maximum number of concurrent requests to execute at the same time.
    * If undefined, all requests will execute in parallel (default behavior).
@@ -482,4 +535,47 @@ function isPipelineManagerStage<
     | PipelineManagerStage<Out, AdapterExecutionResult, RequestConfig>
 ): stage is PipelineManagerStage<Out, AdapterExecutionResult, RequestConfig> {
   return "request" in stage && !("config" in stage);
+}
+
+/**
+ * Creates a new RequestBatch with stages and adapter.
+ * This is a convenience function that wraps RequestBatch.batch().
+ *
+ * @template Out - The output type (should be an array type, e.g., `User[]` for batches)
+ * @template AdapterExecutionResult - The type of result returned by the adapter
+ * @template RequestConfig - The type of request configuration
+ * @param stages - Array of pipeline stages (request or manager stages)
+ * @param adapter - The request adapter to use for HTTP requests
+ * @returns A new RequestBatch instance with the stages and adapter configured
+ *
+ * @example
+ * ```typescript
+ * import { batch } from '@flow-conductor/core';
+ * import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
+ *
+ * const adapter = new FetchRequestAdapter();
+ * const batchInstance = batch(
+ *   [
+ *     { config: { url: '/api/users/1', method: 'GET' } },
+ *     { config: { url: '/api/users/2', method: 'GET' } },
+ *     { config: { url: '/api/users/3', method: 'GET' } }
+ *   ],
+ *   adapter
+ * );
+ *
+ * const results = await batchInstance.execute();
+ * ```
+ */
+export function batch<
+  Out,
+  AdapterExecutionResult,
+  RequestConfig extends IRequestConfig = IRequestConfig,
+>(
+  stages: Array<
+    | PipelineRequestStage<AdapterExecutionResult, Out, RequestConfig>
+    | PipelineManagerStage<Out, AdapterExecutionResult, RequestConfig>
+  >,
+  adapter: RequestAdapter<AdapterExecutionResult, RequestConfig>
+): RequestBatch<Out[], AdapterExecutionResult, RequestConfig> {
+  return RequestBatch.batch(stages, adapter);
 }

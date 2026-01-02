@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import * as assert from "node:assert";
-import { RequestBatch } from "../request-batch";
+import { batch } from "../request-batch";
 import RequestChain from "../request-chain";
 import type { IRequestConfig } from "../index";
 import fetchMock, {
@@ -54,25 +54,22 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(secondUser))
         .once(JSON.stringify(thirdUser));
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/3", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/3", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 3);
       assert.strictEqual(results[0].body, JSON.stringify(firstUser));
       assert.strictEqual(results[1].body, JSON.stringify(secondUser));
@@ -81,14 +78,9 @@ describe("RequestBatch", () => {
 
     test("should return empty array when no requests are added", async () => {
       resetFetchMock();
-      const batch = new RequestBatch<
-        TestRequestResult<unknown>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
+      const batchInstance = batch([], new TestAdapter());
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 0);
     });
 
@@ -97,19 +89,16 @@ describe("RequestBatch", () => {
       const response = JSON.stringify(firstUser);
       fetchMock.once(response);
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 1);
       assert.strictEqual(results[0].body, response);
     });
@@ -123,48 +112,37 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(secondUser))
         .once(JSON.stringify(thirdUser));
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.withConcurrency(2);
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/3", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/3", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
+      batchInstance.withConcurrency(2);
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 3);
     });
 
     test("should throw error when concurrency limit is 0", () => {
-      const batch = new RequestBatch<
-        TestRequestResult<unknown>[],
-        Response,
-        IRequestConfig
-      >();
+      const batchInstance = batch([], new TestAdapter());
       assert.throws(() => {
-        batch.withConcurrency(0);
+        batchInstance.withConcurrency(0);
       }, /Concurrency limit must be greater than 0/);
     });
 
     test("should throw error when concurrency limit is negative", () => {
-      const batch = new RequestBatch<
-        TestRequestResult<unknown>[],
-        Response,
-        IRequestConfig
-      >();
+      const batchInstance = batch([], new TestAdapter());
       assert.throws(() => {
-        batch.withConcurrency(-1);
+        batchInstance.withConcurrency(-1);
       }, /Concurrency limit must be greater than 0/);
     });
 
@@ -175,37 +153,30 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(secondUser))
         .once(JSON.stringify(thirdUser));
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
       // Don't set concurrency - should execute all in parallel
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/3", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/3", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 3);
     });
 
     test("withConcurrency should return the batch instance for chaining", () => {
-      const batch = new RequestBatch<
-        TestRequestResult<unknown>[],
-        Response,
-        IRequestConfig
-      >();
-      const result = batch.withConcurrency(5);
-      assert.strictEqual(result, batch);
+      const batchInstance = batch([], new TestAdapter());
+      const result = batchInstance.withConcurrency(5);
+      assert.strictEqual(result, batchInstance);
     });
   });
 
@@ -218,26 +189,23 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(thirdUser));
 
       const resultHandler = createMockFn();
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.withResultHandler(resultHandler);
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/3", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/3", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
+      batchInstance.withResultHandler(resultHandler);
 
-      await batch.execute();
+      await batchInstance.execute();
       assert.ok(resultHandler.toHaveBeenCalled());
       assert.strictEqual(resultHandler.calls.length, 1);
       const results = resultHandler.calls[0][0] as TestRequestResult<
@@ -249,15 +217,10 @@ describe("RequestBatch", () => {
     test("should not call result handler when batch is empty", async () => {
       resetFetchMock();
       const resultHandler = createMockFn();
-      const batch = new RequestBatch<
-        TestRequestResult<unknown>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.withResultHandler(resultHandler);
+      const batchInstance = batch([], new TestAdapter());
+      batchInstance.withResultHandler(resultHandler);
 
-      await batch.execute();
+      await batchInstance.execute();
       assert.ok(!resultHandler.toHaveBeenCalled());
     });
 
@@ -270,27 +233,24 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(thirdUser));
 
       const errorHandler = createMockFn();
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.withErrorHandler(errorHandler);
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/3", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/3", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
+      batchInstance.withErrorHandler(errorHandler);
 
       try {
-        await batch.execute();
+        await batchInstance.execute();
         assert.fail("Should have thrown an error");
       } catch {
         assert.ok(errorHandler.toHaveBeenCalled());
@@ -308,23 +268,20 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(secondUser));
 
       const finishHandler = createMockFn();
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.withFinishHandler(finishHandler);
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
+      batchInstance.withFinishHandler(finishHandler);
 
-      await batch.execute();
+      await batchInstance.execute();
       assert.ok(finishHandler.toHaveBeenCalled());
     });
 
@@ -333,24 +290,21 @@ describe("RequestBatch", () => {
       fetchMock.once(JSON.stringify(firstUser)).mockReject(new Error("Error"));
 
       const finishHandler = createMockFn();
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.withFinishHandler(finishHandler);
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
+      batchInstance.withFinishHandler(finishHandler);
 
       try {
-        await batch.execute();
+        await batchInstance.execute();
         assert.fail("Should have thrown an error");
       } catch {
         assert.ok(finishHandler.toHaveBeenCalled());
@@ -367,13 +321,18 @@ describe("RequestBatch", () => {
       const resultHandler = createMockFn();
       const finishHandler = createMockFn();
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
+      batchInstance
         .withResultHandler(() => {
           executionOrder.push("result");
           resultHandler();
@@ -382,16 +341,8 @@ describe("RequestBatch", () => {
           executionOrder.push("finish");
           finishHandler();
         });
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-        },
-      ]);
 
-      await batch.execute();
+      await batchInstance.execute();
       assert.ok(resultHandler.toHaveBeenCalled());
       assert.ok(finishHandler.toHaveBeenCalled());
       assert.strictEqual(executionOrder[0], "result");
@@ -407,28 +358,25 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(secondUser))
         .once(JSON.stringify(thirdUser));
 
-      const batch = new RequestBatch<
-        (typeof firstUser)[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-          mapper: (result: Response) => JSON.parse((result as any).body),
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-          mapper: (result: Response) => JSON.parse((result as any).body),
-        },
-        {
-          config: { url: "http://example.com/users/3", method: "GET" },
-          mapper: (result: Response) => JSON.parse((result as any).body),
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            mapper: (result: Response) => JSON.parse((result as any).body),
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+            mapper: (result: Response) => JSON.parse((result as any).body),
+          },
+          {
+            config: { url: "http://example.com/users/3", method: "GET" },
+            mapper: (result: Response) => JSON.parse((result as any).body),
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 3);
       assert.deepStrictEqual(results[0], firstUser);
       assert.deepStrictEqual(results[1], secondUser);
@@ -441,26 +389,27 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(firstUser))
         .once(JSON.stringify(secondUser));
 
-      const batch = new RequestBatch<string[], Response, IRequestConfig>();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-          mapper: async (result: Response) => {
-            const data = JSON.parse((result as any).body);
-            return data.name;
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            mapper: async (result: Response) => {
+              const data = JSON.parse((result as any).body);
+              return data.name;
+            },
           },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-          mapper: async (result: Response) => {
-            const data = JSON.parse((result as any).body);
-            return data.name;
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+            mapper: async (result: Response) => {
+              const data = JSON.parse((result as any).body);
+              return data.name;
+            },
           },
-        },
-      ]);
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 2);
       assert.strictEqual(results[0], firstUser.name);
       assert.strictEqual(results[1], secondUser.name);
@@ -472,26 +421,23 @@ describe("RequestBatch", () => {
       resetFetchMock();
       fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(thirdUser));
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-          precondition: () => false,
-        },
-        {
-          config: { url: "http://example.com/users/3", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+            precondition: () => false,
+          },
+          {
+            config: { url: "http://example.com/users/3", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 2);
       assert.strictEqual(results[0].body, JSON.stringify(firstUser));
       assert.strictEqual(results[1].body, JSON.stringify(thirdUser));
@@ -503,47 +449,41 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(firstUser))
         .once(JSON.stringify(secondUser));
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-          precondition: () => true,
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-          precondition: () => true,
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            precondition: () => true,
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+            precondition: () => true,
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 2);
     });
 
     test("should skip all stages when all preconditions are false", async () => {
       resetFetchMock();
-      const batch = new RequestBatch<
-        TestRequestResult<unknown>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-          precondition: () => false,
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-          precondition: () => false,
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            precondition: () => false,
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+            precondition: () => false,
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 0);
     });
   });
@@ -558,28 +498,25 @@ describe("RequestBatch", () => {
       const interceptor1 = createMockFn();
       const interceptor2 = createMockFn();
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-          resultInterceptor: (result) => {
-            interceptor1(result);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            resultInterceptor: (result) => {
+              interceptor1(result);
+            },
           },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-          resultInterceptor: (result) => {
-            interceptor2(result);
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+            resultInterceptor: (result) => {
+              interceptor2(result);
+            },
           },
-        },
-      ]);
+        ],
+        new TestAdapter()
+      );
 
-      await batch.execute();
+      await batchInstance.execute();
       assert.ok(interceptor1.toHaveBeenCalled());
       assert.ok(interceptor2.toHaveBeenCalled());
     });
@@ -589,23 +526,20 @@ describe("RequestBatch", () => {
       fetchMock.once(JSON.stringify(firstUser));
 
       const interceptor = createMockFn();
-      const batch = new RequestBatch<
-        (typeof firstUser)[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-          mapper: (result: Response) => JSON.parse((result as any).body),
-          resultInterceptor: (result) => {
-            interceptor(result);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            mapper: (result: Response) => JSON.parse((result as any).body),
+            resultInterceptor: (result) => {
+              interceptor(result);
+            },
           },
-        },
-      ]);
+        ],
+        new TestAdapter()
+      );
 
-      await batch.execute();
+      await batchInstance.execute();
       assert.ok(interceptor.toHaveBeenCalled());
       assert.deepStrictEqual(interceptor.calls[0][0], firstUser);
     });
@@ -616,24 +550,21 @@ describe("RequestBatch", () => {
 
       let interceptorResolved = false;
       const interceptor = createMockFn();
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-          resultInterceptor: async (result) => {
-            await new Promise((resolve) => setTimeout(resolve, 10));
-            interceptorResolved = true;
-            interceptor(result);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            resultInterceptor: async (result) => {
+              await new Promise((resolve) => setTimeout(resolve, 10));
+              interceptorResolved = true;
+              interceptor(result);
+            },
           },
-        },
-      ]);
+        ],
+        new TestAdapter()
+      );
 
-      await batch.execute();
+      await batchInstance.execute();
       assert.ok(interceptorResolved);
       assert.ok(interceptor.toHaveBeenCalled());
     });
@@ -646,12 +577,6 @@ describe("RequestBatch", () => {
       fetchMock.once(JSON.stringify(firstUser)).mockReject(error);
 
       const stageErrorHandler = createMockFn();
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
       const stage2 = {
         config: { url: "http://example.com/users/2", method: "GET" as const },
         errorHandler: async (err: Error) => {
@@ -660,15 +585,18 @@ describe("RequestBatch", () => {
           stageErrorHandler(err);
         },
       };
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        stage2,
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          stage2,
+        ],
+        new TestAdapter()
+      );
 
       try {
-        await batch.execute();
+        await batchInstance.execute();
         assert.fail("Should have thrown an error");
       } catch (err) {
         // Error handler should be called before error propagates
@@ -691,12 +619,6 @@ describe("RequestBatch", () => {
       fetchMock.once(JSON.stringify(firstUser)).mockReject(error);
 
       const stageErrorHandler = createMockFn();
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
       const stage2 = {
         config: requestConfig,
         errorHandler: async (err: Error) => {
@@ -705,15 +627,18 @@ describe("RequestBatch", () => {
           stageErrorHandler(err);
         },
       };
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        stage2,
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          stage2,
+        ],
+        new TestAdapter()
+      );
 
       try {
-        await batch.execute();
+        await batchInstance.execute();
         assert.fail("Should have thrown an error");
       } catch (err) {
         // Error handler should be called before error propagates
@@ -740,23 +665,20 @@ describe("RequestBatch", () => {
         .mockReject(networkError) // Attempt 2 (retry 1)
         .once(JSON.stringify(firstUser)); // Attempt 3 (retry 2) - succeeds
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-          retry: {
-            maxRetries: 2,
-            retryDelay: 10,
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            retry: {
+              maxRetries: 2,
+              retryDelay: 10,
+            },
           },
-        },
-      ]);
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 1);
       assert.strictEqual(results[0].body, JSON.stringify(firstUser));
       // Should have made 3 calls (initial + 2 retries)
@@ -774,24 +696,21 @@ describe("RequestBatch", () => {
         .mockReject(networkError)
         .mockReject(networkError);
 
-      const batch = new RequestBatch<
-        TestRequestResult<unknown>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-          retry: {
-            maxRetries: 3,
-            retryDelay: 10,
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            retry: {
+              maxRetries: 3,
+              retryDelay: 10,
+            },
           },
-        },
-      ]);
+        ],
+        new TestAdapter()
+      );
 
       try {
-        await batch.execute();
+        await batchInstance.execute();
         assert.fail("Should have thrown an error");
       } catch (error) {
         // After retries are exhausted, the error is thrown
@@ -816,24 +735,21 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(firstUser));
 
       const startTime = Date.now();
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-          retry: {
-            maxRetries: 2,
-            retryDelay: 50,
-            exponentialBackoff: true,
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            retry: {
+              maxRetries: 2,
+              retryDelay: 50,
+              exponentialBackoff: true,
+            },
           },
-        },
-      ]);
+        ],
+        new TestAdapter()
+      );
 
-      await batch.execute();
+      await batchInstance.execute();
       const elapsed = Date.now() - startTime;
       // Should have waited: 50ms (1st retry) + 100ms (2nd retry) = 150ms minimum
       assert.ok(elapsed >= 150);
@@ -849,25 +765,22 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(firstUser));
 
       const startTime = Date.now();
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-          retry: {
-            maxRetries: 3,
-            retryDelay: 50,
-            exponentialBackoff: true,
-            maxDelay: 100,
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            retry: {
+              maxRetries: 3,
+              retryDelay: 50,
+              exponentialBackoff: true,
+              maxDelay: 100,
+            },
           },
-        },
-      ]);
+        ],
+        new TestAdapter()
+      );
 
-      await batch.execute();
+      await batchInstance.execute();
       const elapsed = Date.now() - startTime;
       // Should have waited: 50ms + 100ms (capped) + 100ms (capped) = 250ms minimum
       assert.ok(elapsed >= 250);
@@ -881,34 +794,28 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(firstUser))
         .once(JSON.stringify(secondUser));
 
-      const nestedBatch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      nestedBatch.setRequestAdapter(new TestAdapter());
-      nestedBatch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-      ]);
+      const nestedBatch = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          request: nestedBatch,
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            request: nestedBatch,
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 2);
       assert.strictEqual(results[0][0].body, JSON.stringify(firstUser));
       assert.strictEqual(results[1].body, JSON.stringify(secondUser));
@@ -918,29 +825,27 @@ describe("RequestBatch", () => {
       resetFetchMock();
       fetchMock.once(JSON.stringify(firstUser));
 
-      const nestedBatch = new RequestBatch<
-        (typeof firstUser)[],
-        Response,
-        IRequestConfig
-      >();
-      nestedBatch.setRequestAdapter(new TestAdapter());
-      nestedBatch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-          mapper: (result: Response) => JSON.parse((result as any).body),
-        },
-      ]);
+      const nestedBatch = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            mapper: (result: Response) => JSON.parse((result as any).body),
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const batch = new RequestBatch<string[], Response, IRequestConfig>();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          request: nestedBatch,
-          mapper: (result: (typeof firstUser)[]) => result[0].name,
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            request: nestedBatch,
+            mapper: (result: (typeof firstUser)[]) => result[0].name,
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 1);
       assert.strictEqual(results[0], firstUser.name);
     });
@@ -968,22 +873,19 @@ describe("RequestBatch", () => {
         config: { url: "http://example.com/users/2", method: "GET" },
       });
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof secondUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(adapter);
-      batch.addAll([
-        {
-          request: nestedChain,
-        },
-        {
-          config: { url: "http://example.com/users/3", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            request: nestedChain,
+          },
+          {
+            config: { url: "http://example.com/users/3", method: "GET" },
+          },
+        ],
+        adapter
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 2);
       // The nested chain executes users/1 then users/2 sequentially and returns the last stage result (secondUser)
       // The direct request executes users/3 and returns thirdUser
@@ -1053,16 +955,17 @@ describe("RequestBatch", () => {
         mapper: (result: Response) => JSON.parse((result as any).body).name,
       });
 
-      const batch = new RequestBatch<string[], Response, IRequestConfig>();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          request: nestedChain,
-          mapper: (result: string) => result.toUpperCase(),
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            request: nestedChain,
+            mapper: (result: string) => result.toUpperCase(),
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 1);
       assert.strictEqual(results[0], secondUser.name.toUpperCase());
     });
@@ -1099,28 +1002,22 @@ describe("RequestBatch", () => {
         config: { url: "http://example.com/users/3", method: "GET" },
       });
 
-      const batch = new RequestBatch<
-        (
-          | TestRequestResult<typeof firstUser>
-          | TestRequestResult<typeof thirdUser>
-        )[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          request: nestedChain1,
-        },
-        {
-          request: nestedChain2,
-        },
-        {
-          config: { url: "http://example.com/users/4", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            request: nestedChain1,
+          },
+          {
+            request: nestedChain2,
+          },
+          {
+            config: { url: "http://example.com/users/4", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 3);
       // Verify all results exist - nestedChain1 returns firstUser, nestedChain2 returns thirdUser (last stage),
       // direct request returns User 4
@@ -1195,23 +1092,20 @@ describe("RequestBatch", () => {
         mapper: (result: Response) => JSON.parse((result as any).body),
       });
 
-      const batch = new RequestBatch<
-        (typeof secondUser)[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          request: nestedChain,
-        },
-        {
-          config: { url: "http://example.com/users/3", method: "GET" },
-          mapper: (result: Response) => JSON.parse((result as any).body),
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            request: nestedChain,
+          },
+          {
+            config: { url: "http://example.com/users/3", method: "GET" },
+            mapper: (result: Response) => JSON.parse((result as any).body),
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 2);
       // Verify both results exist - nested chain should return secondUser (last stage),
       // direct request should return thirdUser
@@ -1267,23 +1161,20 @@ describe("RequestBatch", () => {
         config: { url: "http://example.com/users/2", method: "GET" },
       });
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          request: nestedChain,
-          errorHandler: (error) => {
-            errorHandler(error);
+      const batchInstance = batch(
+        [
+          {
+            request: nestedChain,
+            errorHandler: (error) => {
+              errorHandler(error);
+            },
           },
-        },
-      ]);
+        ],
+        new TestAdapter()
+      );
 
       try {
-        await batch.execute();
+        await batchInstance.execute();
         assert.fail("Should have thrown an error");
       } catch (error) {
         assert.ok(errorHandler.toHaveBeenCalled());
@@ -1315,19 +1206,16 @@ describe("RequestBatch", () => {
         mapper: (result: Response) => JSON.parse((result as any).body),
       });
 
-      const batch = new RequestBatch<
-        (typeof secondUser)[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          request: nestedChain,
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            request: nestedChain,
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 1);
       // Nested chain should return the last stage result (secondUser)
       assert.deepStrictEqual(results[0], secondUser);
@@ -1341,36 +1229,30 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(firstUser))
         .once(JSON.stringify(secondUser));
 
-      const nestedBatch = new RequestBatch<
-        (typeof firstUser)[],
-        Response,
-        IRequestConfig
-      >();
-      nestedBatch.setRequestAdapter(new TestAdapter());
-      nestedBatch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-          mapper: (result: Response) => JSON.parse((result as any).body),
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-          mapper: (result: Response) => JSON.parse((result as any).body),
-        },
-      ]);
+      const nestedBatch = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            mapper: (result: Response) => JSON.parse((result as any).body),
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+            mapper: (result: Response) => JSON.parse((result as any).body),
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const batch = new RequestBatch<
-        (typeof firstUser)[][],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          request: nestedBatch,
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            request: nestedBatch,
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 1);
       // Nested batch should return an array of results
       assert.ok(Array.isArray(results[0]));
@@ -1401,37 +1283,38 @@ describe("RequestBatch", () => {
         mapper: (result: Response) => JSON.parse((result as any).body),
       });
 
-      const batch = new RequestBatch<string[], Response, IRequestConfig>();
-      batch.setRequestAdapter(new TestAdapter());
       let nestedChainResult: typeof secondUser | undefined;
-      batch.addAll([
-        {
-          request: nestedChain,
-          mapper: (result: typeof secondUser) => {
-            // Verify we can access the nested chain result
-            // The nested chain should return the last stage result
-            assert.ok(result, "Nested chain result should exist");
-            assert.strictEqual(
-              typeof result.id,
-              "number",
-              "Result should have id property"
-            );
-            assert.strictEqual(
-              typeof result.name,
-              "string",
-              "Result should have name property"
-            );
-            nestedChainResult = result;
-            return result.name;
+      const batchInstance = batch(
+        [
+          {
+            request: nestedChain,
+            mapper: (result: typeof secondUser) => {
+              // Verify we can access the nested chain result
+              // The nested chain should return the last stage result
+              assert.ok(result, "Nested chain result should exist");
+              assert.strictEqual(
+                typeof result.id,
+                "number",
+                "Result should have id property"
+              );
+              assert.strictEqual(
+                typeof result.name,
+                "string",
+                "Result should have name property"
+              );
+              nestedChainResult = result;
+              return result.name;
+            },
           },
-        },
-        {
-          config: { url: "http://example.com/users/3", method: "GET" },
-          mapper: (result: Response) => JSON.parse((result as any).body).name,
-        },
-      ]);
+          {
+            config: { url: "http://example.com/users/3", method: "GET" },
+            mapper: (result: Response) => JSON.parse((result as any).body).name,
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 2);
       // Verify both results exist and are strings (names)
       assert.ok(
@@ -1492,23 +1375,20 @@ describe("RequestBatch", () => {
         mapper: (result: Response) => JSON.parse((result as any).body),
       });
 
-      const batch = new RequestBatch<
-        (typeof secondUser)[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          request: outerChain,
-        },
-        {
-          config: { url: "http://example.com/users/3", method: "GET" },
-          mapper: (result: Response) => JSON.parse((result as any).body),
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            request: outerChain,
+          },
+          {
+            config: { url: "http://example.com/users/3", method: "GET" },
+            mapper: (result: Response) => JSON.parse((result as any).body),
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 2);
       // Outer chain should return the last stage result (secondUser)
       const hasSecondUser = results.some((r) => r.id === secondUser.id);
@@ -1527,30 +1407,22 @@ describe("RequestBatch", () => {
       resetFetchMock();
       fetchMock.once(JSON.stringify(firstUser));
 
-      const emptyBatch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      emptyBatch.setRequestAdapter(new TestAdapter());
       // Don't add any requests - empty batch
+      const emptyBatch = batch([], new TestAdapter());
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[][],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          request: emptyBatch,
-        },
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            request: emptyBatch,
+          },
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 2);
       // Empty batch should return empty array
       assert.ok(Array.isArray(results[0]));
@@ -1579,19 +1451,16 @@ describe("RequestBatch", () => {
         mapper: (result: Response) => JSON.parse((result as any).body),
       });
 
-      const batch = new RequestBatch<
-        (typeof secondUser)[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          request: nestedChain,
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            request: nestedChain,
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 1);
       // Type should be preserved - result should be typeof secondUser
       const result = results[0];
@@ -1607,20 +1476,17 @@ describe("RequestBatch", () => {
       resetFetchMock();
       fetchMock.mockReject("String error" as any);
 
-      const batch = new RequestBatch<
-        TestRequestResult<unknown>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
 
       try {
-        await batch.execute();
+        await batchInstance.execute();
         assert.fail("Should have thrown an error");
       } catch (error) {
         // The code converts non-Error objects to Error instances
@@ -1640,25 +1506,22 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(secondUser))
         .once(JSON.stringify(thirdUser));
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/3", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/3", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       // Results should be in the same order as requests were added
       assert.strictEqual(results.length, 3);
       assert.strictEqual(results[0].body, JSON.stringify(firstUser));
@@ -1670,22 +1533,19 @@ describe("RequestBatch", () => {
       resetFetchMock();
       fetchMock.once(JSON.stringify(firstUser));
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.addAll([
-        {
-          config: () => ({
-            url: "http://example.com/users/1",
-            method: "GET" as const,
-          }),
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: () => ({
+              url: "http://example.com/users/1",
+              method: "GET" as const,
+            }),
+          },
+        ],
+        new TestAdapter()
+      );
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 1);
     });
 
@@ -1693,18 +1553,12 @@ describe("RequestBatch", () => {
       resetFetchMock();
       fetchMock.once(JSON.stringify(firstUser));
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
       const stage = {
         config: { url: "http://example.com/users/1", method: "GET" as const },
       };
-      batch.addAll([stage]);
+      const batchInstance = batch([stage], new TestAdapter());
 
-      await batch.execute();
+      await batchInstance.execute();
       assert.ok(stage.result);
       assert.strictEqual(
         (stage.result as TestRequestResult<typeof firstUser>).body,
@@ -1721,26 +1575,23 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(secondUser))
         .once(JSON.stringify(thirdUser));
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.withConcurrency(3);
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/3", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/3", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
+      batchInstance.withConcurrency(3);
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 3);
     });
 
@@ -1750,23 +1601,20 @@ describe("RequestBatch", () => {
         .once(JSON.stringify(firstUser))
         .once(JSON.stringify(secondUser));
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.withConcurrency(10); // More than requests
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-        {
-          config: { url: "http://example.com/users/2", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+          {
+            config: { url: "http://example.com/users/2", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
+      batchInstance.withConcurrency(10); // More than requests
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 2);
     });
 
@@ -1774,20 +1622,17 @@ describe("RequestBatch", () => {
       resetFetchMock();
       fetchMock.once(JSON.stringify(firstUser));
 
-      const batch = new RequestBatch<
-        TestRequestResult<typeof firstUser>[],
-        Response,
-        IRequestConfig
-      >();
-      batch.setRequestAdapter(new TestAdapter());
-      batch.withConcurrency(1);
-      batch.addAll([
-        {
-          config: { url: "http://example.com/users/1", method: "GET" },
-        },
-      ]);
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+          },
+        ],
+        new TestAdapter()
+      );
+      batchInstance.withConcurrency(1);
 
-      const results = await batch.execute();
+      const results = await batchInstance.execute();
       assert.strictEqual(results.length, 1);
     });
   });

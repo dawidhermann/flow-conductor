@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import * as assert from "node:assert";
 import RequestChain, { begin } from "../request-chain";
-import { RequestBatch } from "../request-batch";
+import { batch } from "../request-batch";
 import type { ResultHandler, IRequestConfig } from "../index";
 import type RequestAdapter from "../request-adapter";
 import fetchMock, {
@@ -403,20 +403,17 @@ describe("Nested request manager test", () => {
       .once(JSON.stringify(thirdUser));
 
     // Create a nested batch that fetches multiple users in parallel
-    const nestedBatch = new RequestBatch<
-      TestRequestResult<typeof firstUser>[],
-      Response,
-      IRequestConfig
-    >();
-    nestedBatch.setRequestAdapter(new TestAdapter());
-    nestedBatch.addAll([
-      {
-        config: { url: "http://example.com/users/1", method: "GET" },
-      },
-      {
-        config: { url: "http://example.com/users/2", method: "GET" },
-      },
-    ]);
+    const nestedBatch = batch(
+      [
+        {
+          config: { url: "http://example.com/users/1", method: "GET" },
+        },
+        {
+          config: { url: "http://example.com/users/2", method: "GET" },
+        },
+      ],
+      new TestAdapter()
+    );
 
     // Chain that uses the batch, then makes another request
     const result = await RequestChain.begin<
@@ -451,22 +448,19 @@ describe("Nested request manager test", () => {
     resetFetchMock();
     fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(secondUser));
 
-    const nestedBatch = new RequestBatch<
-      (typeof firstUser)[],
-      Response,
-      IRequestConfig
-    >();
-    nestedBatch.setRequestAdapter(new TestAdapter());
-    nestedBatch.addAll([
-      {
-        config: { url: "http://example.com/users/1", method: "GET" },
-        mapper: (result: Response) => JSON.parse((result as any).body),
-      },
-      {
-        config: { url: "http://example.com/users/2", method: "GET" },
-        mapper: (result: Response) => JSON.parse((result as any).body),
-      },
-    ]);
+    const nestedBatch = batch(
+      [
+        {
+          config: { url: "http://example.com/users/1", method: "GET" },
+          mapper: (result: Response) => JSON.parse((result as any).body),
+        },
+        {
+          config: { url: "http://example.com/users/2", method: "GET" },
+          mapper: (result: Response) => JSON.parse((result as any).body),
+        },
+      ],
+      new TestAdapter()
+    );
 
     const result = await RequestChain.begin<string, Response, IRequestConfig>(
       {
@@ -490,18 +484,15 @@ describe("Nested request manager test", () => {
       .once(JSON.stringify(thirdUser));
 
     // First stage gets a user
-    const nestedBatch = new RequestBatch<
-      (typeof firstUser)[],
-      Response,
-      IRequestConfig
-    >();
-    nestedBatch.setRequestAdapter(new TestAdapter());
-    nestedBatch.addAll([
-      {
-        config: { url: "http://example.com/users/1", method: "GET" },
-        mapper: (result: Response) => JSON.parse((result as any).body),
-      },
-    ]);
+    const nestedBatch = batch(
+      [
+        {
+          config: { url: "http://example.com/users/1", method: "GET" },
+          mapper: (result: Response) => JSON.parse((result as any).body),
+        },
+      ],
+      new TestAdapter()
+    );
 
     const result = await RequestChain.begin<
       typeof firstUser,
@@ -537,21 +528,18 @@ describe("Nested request manager test", () => {
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
 
-    const nestedBatch = new RequestBatch<
-      TestRequestResult<typeof firstUser>[],
-      Response,
-      IRequestConfig
-    >();
-    nestedBatch.setRequestAdapter(new TestAdapter());
+    const nestedBatch = batch(
+      [
+        {
+          config: { url: "http://example.com/users/1", method: "GET" },
+        },
+        {
+          config: { url: "http://example.com/users/2", method: "GET" },
+        },
+      ],
+      new TestAdapter()
+    );
     nestedBatch.withConcurrency(1); // Sequential execution
-    nestedBatch.addAll([
-      {
-        config: { url: "http://example.com/users/1", method: "GET" },
-      },
-      {
-        config: { url: "http://example.com/users/2", method: "GET" },
-      },
-    ]);
 
     const result = await RequestChain.begin<
       TestRequestResult<typeof firstUser>[],
@@ -578,22 +566,19 @@ describe("Nested request manager test", () => {
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
 
-    const nestedBatch = new RequestBatch<
-      (typeof firstUser)[],
-      Response,
-      IRequestConfig
-    >();
-    nestedBatch.setRequestAdapter(new TestAdapter());
-    nestedBatch.addAll([
-      {
-        config: { url: "http://example.com/users/1", method: "GET" },
-        mapper: (result: Response) => JSON.parse((result as any).body),
-      },
-      {
-        config: { url: "http://example.com/users/2", method: "GET" },
-        mapper: (result: Response) => JSON.parse((result as any).body),
-      },
-    ]);
+    const nestedBatch = batch(
+      [
+        {
+          config: { url: "http://example.com/users/1", method: "GET" },
+          mapper: (result: Response) => JSON.parse((result as any).body),
+        },
+        {
+          config: { url: "http://example.com/users/2", method: "GET" },
+          mapper: (result: Response) => JSON.parse((result as any).body),
+        },
+      ],
+      new TestAdapter()
+    );
 
     const result = await RequestChain.begin<
       (typeof firstUser)[],
@@ -624,22 +609,19 @@ describe("Nested request manager test", () => {
       .once(JSON.stringify(secondUser))
       .once(JSON.stringify(thirdUser));
 
-    const nestedBatch = new RequestBatch<
-      (typeof firstUser)[],
-      Response,
-      IRequestConfig
-    >();
-    nestedBatch.setRequestAdapter(new TestAdapter());
-    nestedBatch.addAll([
-      {
-        config: { url: "http://example.com/users/1", method: "GET" },
-        mapper: (result: Response) => JSON.parse((result as any).body),
-      },
-      {
-        config: { url: "http://example.com/users/2", method: "GET" },
-        mapper: (result: Response) => JSON.parse((result as any).body),
-      },
-    ]);
+    const nestedBatch = batch(
+      [
+        {
+          config: { url: "http://example.com/users/1", method: "GET" },
+          mapper: (result: Response) => JSON.parse((result as any).body),
+        },
+        {
+          config: { url: "http://example.com/users/2", method: "GET" },
+          mapper: (result: Response) => JSON.parse((result as any).body),
+        },
+      ],
+      new TestAdapter()
+    );
 
     const result = await RequestChain.begin<
       (typeof firstUser)[],
@@ -681,18 +663,15 @@ describe("Nested request manager test", () => {
       .once(JSON.stringify(thirdUser));
 
     // First stage gets a user
-    const nestedBatch = new RequestBatch<
-      (typeof firstUser)[],
-      Response,
-      IRequestConfig
-    >();
-    nestedBatch.setRequestAdapter(new TestAdapter());
-    nestedBatch.addAll([
-      {
-        config: { url: "http://example.com/users/1", method: "GET" },
-        mapper: (result: Response) => JSON.parse((result as any).body),
-      },
-    ]);
+    const nestedBatch = batch(
+      [
+        {
+          config: { url: "http://example.com/users/1", method: "GET" },
+          mapper: (result: Response) => JSON.parse((result as any).body),
+        },
+      ],
+      new TestAdapter()
+    );
 
     const result = await RequestChain.begin<
       typeof firstUser,
@@ -752,34 +731,28 @@ describe("Nested request manager test", () => {
       .once(JSON.stringify(thirdUser));
 
     // Create a deeply nested batch (batch within batch)
-    const innerBatch = new RequestBatch<
-      (typeof firstUser)[],
-      Response,
-      IRequestConfig
-    >();
-    innerBatch.setRequestAdapter(new TestAdapter());
-    innerBatch.addAll([
-      {
-        config: { url: "http://example.com/users/1", method: "GET" },
-        mapper: (result: Response) => JSON.parse((result as any).body),
-      },
-    ]);
+    const innerBatch = batch(
+      [
+        {
+          config: { url: "http://example.com/users/1", method: "GET" },
+          mapper: (result: Response) => JSON.parse((result as any).body),
+        },
+      ],
+      new TestAdapter()
+    );
 
-    const outerBatch = new RequestBatch<
-      (typeof firstUser)[][],
-      Response,
-      IRequestConfig
-    >();
-    outerBatch.setRequestAdapter(new TestAdapter());
-    outerBatch.addAll([
-      {
-        request: innerBatch,
-      },
-      {
-        config: { url: "http://example.com/users/2", method: "GET" },
-        mapper: (result: Response) => JSON.parse((result as any).body),
-      },
-    ]);
+    const outerBatch = batch(
+      [
+        {
+          request: innerBatch,
+        },
+        {
+          config: { url: "http://example.com/users/2", method: "GET" },
+          mapper: (result: Response) => JSON.parse((result as any).body),
+        },
+      ],
+      new TestAdapter()
+    );
 
     const result = await RequestChain.begin<
       (typeof firstUser)[][],
@@ -817,13 +790,8 @@ describe("Nested request manager test", () => {
     resetFetchMock();
     fetchMock.once(JSON.stringify(firstUser));
 
-    const emptyBatch = new RequestBatch<
-      TestRequestResult<typeof firstUser>[],
-      Response,
-      IRequestConfig
-    >();
-    emptyBatch.setRequestAdapter(new TestAdapter());
     // Don't add any requests - empty batch
+    const emptyBatch = batch([], new TestAdapter());
 
     const result = await RequestChain.begin<
       TestRequestResult<typeof firstUser>[],
@@ -848,22 +816,19 @@ describe("Nested request manager test", () => {
     resetFetchMock();
     fetchMock.once(JSON.stringify(firstUser)).once(JSON.stringify(secondUser));
 
-    const nestedBatch = new RequestBatch<
-      (typeof firstUser)[],
-      Response,
-      IRequestConfig
-    >();
-    nestedBatch.setRequestAdapter(new TestAdapter());
-    nestedBatch.addAll([
-      {
-        config: { url: "http://example.com/users/1", method: "GET" },
-        mapper: (result: Response) => JSON.parse((result as any).body),
-      },
-      {
-        config: { url: "http://example.com/users/2", method: "GET" },
-        mapper: (result: Response) => JSON.parse((result as any).body),
-      },
-    ]);
+    const nestedBatch = batch(
+      [
+        {
+          config: { url: "http://example.com/users/1", method: "GET" },
+          mapper: (result: Response) => JSON.parse((result as any).body),
+        },
+        {
+          config: { url: "http://example.com/users/2", method: "GET" },
+          mapper: (result: Response) => JSON.parse((result as any).body),
+        },
+      ],
+      new TestAdapter()
+    );
 
     const result = await RequestChain.begin<
       (typeof firstUser)[],
