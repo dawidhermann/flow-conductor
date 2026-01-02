@@ -1483,6 +1483,105 @@ console.log(users[0].name); // "John Doe"
 console.log(users[1].name); // "Jane Doe"
 ```
 
+#### Batch Request Types
+
+Flow-conductor supports two types of batch requests: **homogeneous** (all requests return the same type) and **heterogeneous** (each request can return a different type).
+
+##### Homogeneous Batches
+
+When all requests in a batch return the same type, TypeScript infers an array type:
+
+```typescript
+interface User {
+  id: number;
+  name: string;
+}
+
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => await result.json() as User
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' },
+    mapper: async (result) => await result.json() as User
+  },
+  {
+    config: { url: 'https://api.example.com/users/3', method: 'GET' },
+    mapper: async (result) => await result.json() as User
+  }
+], adapter);
+
+// TypeScript infers: User[]
+const users = await batchInstance.execute();
+console.log(users[0].name); // TypeScript knows this is a User
+console.log(users[1].name); // TypeScript knows this is a User
+```
+
+##### Heterogeneous Batches (Tuple Types)
+
+When each request returns a different type, TypeScript infers a **tuple type** that preserves the individual types at each position:
+
+```typescript
+interface User {
+  id: number;
+  name: string;
+}
+
+interface Product {
+  id: number;
+  title: string;
+  price: number;
+}
+
+interface Order {
+  id: number;
+  total: number;
+  items: number[];
+}
+
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => await result.json() as User
+  },
+  {
+    config: { url: 'https://api.example.com/products/1', method: 'GET' },
+    mapper: async (result) => await result.json() as Product
+  },
+  {
+    config: { url: 'https://api.example.com/orders/1', method: 'GET' },
+    mapper: async (result) => await result.json() as Order
+  }
+], adapter);
+
+// TypeScript infers: [User, Product, Order]
+const results = await batchInstance.execute();
+
+// TypeScript knows the exact type at each position:
+const user: User = results[0];      // ✅ Type-safe: results[0] is User
+const product: Product = results[1]; // ✅ Type-safe: results[1] is Product
+const order: Order = results[2];      // ✅ Type-safe: results[2] is Order
+
+console.log(user.name);        // TypeScript autocomplete works
+console.log(product.title);    // TypeScript autocomplete works
+console.log(order.total);      // TypeScript autocomplete works
+```
+
+**Key Benefits of Tuple Types:**
+
+- **Type Safety**: Each position in the result array has its own type
+- **Autocomplete**: IDE provides accurate autocomplete for each result
+- **Compile-time Checks**: TypeScript catches type errors at compile time
+- **Order Preservation**: The tuple type preserves the order of requests
+
+**When to Use:**
+
+- **Homogeneous batches**: When all requests fetch the same type of resource (e.g., multiple users, multiple products)
+- **Heterogeneous batches**: When fetching different types of resources in parallel (e.g., user profile, product catalog, shopping cart)
+
+**Note:** Tuple types are automatically inferred from the stages you provide. You don't need to explicitly specify the tuple type - TypeScript will infer it from your mappers and stage configurations.
+
 #### RequestBatch with Error Handling
 
 Handle errors for the entire batch or individual requests:
@@ -1531,6 +1630,54 @@ batchInstance.withResultHandler(async (results) => {
 
 await batchInstance.execute();
 ```
+
+#### Real-World Example: Heterogeneous Batch
+
+Here's a practical example of using heterogeneous batches to fetch different types of data in parallel:
+
+```typescript
+interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+}
+
+interface UserPreferences {
+  theme: 'light' | 'dark';
+  notifications: boolean;
+}
+
+interface UserActivity {
+  lastLogin: string;
+  totalLogins: number;
+}
+
+// Fetch user profile, preferences, and activity in parallel
+const batchInstance = batch([
+  {
+    config: { url: `/api/users/${userId}/profile`, method: 'GET' },
+    mapper: async (result) => await result.json() as UserProfile
+  },
+  {
+    config: { url: `/api/users/${userId}/preferences`, method: 'GET' },
+    mapper: async (result) => await result.json() as UserPreferences
+  },
+  {
+    config: { url: `/api/users/${userId}/activity`, method: 'GET' },
+    mapper: async (result) => await result.json() as UserActivity
+  }
+], adapter);
+
+// TypeScript infers: [UserProfile, UserPreferences, UserActivity]
+const [profile, preferences, activity] = await batchInstance.execute();
+
+// All variables are properly typed:
+console.log(profile.name);           // ✅ TypeScript knows this is a string
+console.log(preferences.theme);      // ✅ TypeScript knows this is 'light' | 'dark'
+console.log(activity.totalLogins);   // ✅ TypeScript knows this is a number
+```
+
+This approach is more efficient than sequential requests and provides better type safety than using a union type array.
 
 ### Nested Request Managers
 
@@ -1769,11 +1916,12 @@ const results = await outerBatch.execute();
 
 #### Key Points About Nesting
 
-- **RequestBatch nested in RequestChain**: The batch executes and returns an array. The next stage receives this array as `previousResult`.
-- **RequestChain nested in RequestBatch**: The chain executes sequentially and returns its final result. The batch collects all chain results into an array.
+- **RequestBatch nested in RequestChain**: The batch executes and returns an array or tuple. The next stage receives this array/tuple as `previousResult`.
+- **RequestChain nested in RequestBatch**: The chain executes sequentially and returns its final result. The batch collects all chain results into an array or tuple.
 - **Mappers work at each level**: You can transform results at the batch level, chain level, or individual request level.
 - **Error handling**: Error handlers can be set at the batch level, chain level, or individual request level.
-- **Type safety**: TypeScript correctly infers types through nested structures.
+- **Type preservation**: Tuple types are preserved when nesting heterogeneous batches, providing type safety throughout nested structures.
+- **Type safety**: TypeScript correctly infers types through nested structures. For heterogeneous batches, tuple types are preserved, providing type safety at each position in the result array.
 
 Chain request managers together. Nested chains can also use previous results:
 
@@ -2821,12 +2969,14 @@ The main class for creating and managing request chains.
 
 ### RequestBatch
 
-A batch request manager that executes multiple requests in parallel (or with a concurrency limit). All requests are executed simultaneously (or in controlled batches), and results are returned as an array.
+A batch request manager that executes multiple requests in parallel (or with a concurrency limit). All requests are executed simultaneously (or in controlled batches), and results are returned as an array or tuple.
 
 #### Constructor
 
 - `new RequestBatch<Out, AdapterExecutionResult, RequestConfig>()` - Create a new RequestBatch instance
-  - `Out` - The output type (should be an array type, e.g., `User[]` for batches)
+  - `Out` - The output type:
+    - For **homogeneous batches**: an array type (e.g., `User[]` when all requests return `User`)
+    - For **heterogeneous batches**: a tuple type (e.g., `[User, Product, Order]` when each request returns a different type)
   - `AdapterExecutionResult` - The type of result returned by the adapter
   - `RequestConfig` - The type of request configuration
 
@@ -2840,7 +2990,9 @@ A batch request manager that executes multiple requests in parallel (or with a c
 - `withErrorHandler(handler: ErrorHandler): RequestBatch` - Set error handler for batch execution failures
 - `withFinishHandler(handler: VoidFunction): RequestBatch` - Set finish handler called after batch completion
 
-#### Example
+#### Examples
+
+**Homogeneous Batch (all requests return the same type):**
 
 ```typescript
 import { batch } from '@flow-conductor/core';
@@ -2856,13 +3008,51 @@ const batchInstance = batch([
 batchInstance.withConcurrency(5); // Optional: limit concurrent requests
 
 const results = await batchInstance.execute();
+// TypeScript infers: Response[] (or User[] if mappers are used)
 // Returns array of all results
+```
+
+**Heterogeneous Batch (each request returns a different type):**
+
+```typescript
+import { batch } from '@flow-conductor/core';
+import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
+
+interface User { id: number; name: string; }
+interface Product { id: number; title: string; }
+interface Order { id: number; total: number; }
+
+const adapter = new FetchRequestAdapter();
+
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (r) => await r.json() as User
+  },
+  {
+    config: { url: 'https://api.example.com/products/1', method: 'GET' },
+    mapper: async (r) => await r.json() as Product
+  },
+  {
+    config: { url: 'https://api.example.com/orders/1', method: 'GET' },
+    mapper: async (r) => await r.json() as Order
+  }
+], adapter);
+
+// TypeScript infers: [User, Product, Order]
+const results = await batchInstance.execute();
+const user: User = results[0];      // Type-safe access
+const product: Product = results[1]; // Type-safe access
+const order: Order = results[2];     // Type-safe access
 ```
 
 ### Exported Functions
 
 - `begin<Out, AdapterExecutionResult, AdapterRequestConfig>(stage: PipelineRequestStage | PipelineManagerStage, adapter: RequestAdapter): RequestChain` - Alternative function to start a request chain (same as `RequestChain.begin`)
-- `batch<Out, AdapterExecutionResult, RequestConfig>(stages: Array<PipelineRequestStage | PipelineManagerStage>, adapter: RequestAdapter): RequestBatch` - Convenience function to create a RequestBatch with stages and adapter already configured
+- `batch<Stages, AdapterExecutionResult, RequestConfig>(stages: Stages, adapter: RequestAdapter): RequestBatch<StagesToTuple<Stages>, AdapterExecutionResult, RequestConfig>` - Convenience function to create a RequestBatch with stages and adapter already configured
+  - Automatically infers tuple types for heterogeneous batches
+  - For homogeneous batches, returns `RequestBatch<Out[], ...>` where `Out` is the common type
+  - For heterogeneous batches, returns `RequestBatch<[T1, T2, T3, ...], ...>` where each `T` is the type from the corresponding stage
 
 ### Types
 
