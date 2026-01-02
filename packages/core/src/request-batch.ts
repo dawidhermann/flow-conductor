@@ -14,16 +14,48 @@ import {
 } from "./utils/chunk-processor";
 
 /**
+ * Type helper to extract the output type from a pipeline stage.
+ */
+type ExtractStageOutput<
+  Stage extends
+    | PipelineRequestStage<any, any, any>
+    | PipelineManagerStage<any, any, any>,
+> =
+  Stage extends PipelineRequestStage<any, infer Out, any>
+    ? Out
+    : Stage extends PipelineManagerStage<infer Out, any, any>
+      ? Out
+      : never;
+
+/**
+ * Type helper to convert an array of stages into a tuple of their output types.
+ * This enables heterogeneous batch requests where each request can return a different type.
+ */
+type StagesToTuple<
+  Stages extends readonly (
+    | PipelineRequestStage<any, any, any>
+    | PipelineManagerStage<any, any, any>
+  )[],
+> = {
+  readonly [K in keyof Stages]: ExtractStageOutput<Stages[K]>;
+};
+
+/**
  * A batch request manager that executes multiple requests in parallel (or with a concurrency limit).
- * All requests are executed simultaneously (or in controlled batches), and results are returned as an array.
+ * All requests are executed simultaneously (or in controlled batches), and results are returned as an array or tuple.
  *
- * @template Out - The output type (should be an array type, e.g., `User[]` for batches)
+ * Supports both homogeneous batches (all requests return the same type) and heterogeneous batches
+ * (each request can return a different type, using tuple types for type safety).
+ *
+ * @template Out - The output type:
+ *   - For homogeneous batches: an array type (e.g., `User[]`)
+ *   - For heterogeneous batches: a tuple type (e.g., `[User, Product, Order]`)
  * @template AdapterExecutionResult - The type of result returned by the adapter
  * @template RequestConfig - The type of request configuration
  *
  * @example
  * ```typescript
- * // Each request returns a User, so Out should be User[] for the batch
+ * // Homogeneous batch - each request returns a User
  * const batch = new RequestBatch<User[], Response, FetchRequestConfig>();
  * batch.setRequestAdapter(adapter);
  * batch.addAll([
@@ -31,13 +63,18 @@ import {
  *   { config: { url: '/api/users/2', method: 'GET' } },
  *   { config: { url: '/api/users/3', method: 'GET' } }
  * ]);
- *
- * // Execute all requests in parallel (default)
  * const results: User[] = await batch.execute();
  *
- * // Or limit concurrency to 5 requests at a time
- * batch.withConcurrency(5);
- * const results: User[] = await batch.execute();
+ * // Heterogeneous batch - each request returns a different type
+ * const heterogeneousBatch = RequestBatch.batch(
+ *   [
+ *     { config: { url: '/api/users/1', method: 'GET' }, mapper: (r) => r.json() as Promise<User> },
+ *     { config: { url: '/api/products/1', method: 'GET' }, mapper: (r) => r.json() as Promise<Product> },
+ *     { config: { url: '/api/orders/1', method: 'GET' }, mapper: (r) => r.json() as Promise<Order> }
+ *   ],
+ *   adapter
+ * );
+ * const results: [User, Product, Order] = await heterogeneousBatch.execute();
  * ```
  */
 export class RequestBatch<
@@ -49,7 +86,10 @@ export class RequestBatch<
    * Creates a new RequestBatch with stages and adapter.
    * This is the entry point for building a request batch.
    *
-   * @template Out - The output type (should be an array type, e.g., `User[]` for batches)
+   * Supports both homogeneous batches (all requests return the same type) and
+   * heterogeneous batches (each request can return a different type, using tuple types).
+   *
+   * @template Out - The output type (should be an array type, e.g., `User[]` for homogeneous batches)
    * @template AdapterExecutionResult - The type of result returned by the adapter
    * @template RequestConfig - The type of request configuration
    * @param stages - Array of pipeline stages (request or manager stages)
@@ -58,6 +98,7 @@ export class RequestBatch<
    *
    * @example
    * ```typescript
+   * // Homogeneous batch - all requests return User
    * const batch = RequestBatch.batch(
    *   [
    *     { config: { url: '/api/users/1', method: 'GET' } },
@@ -66,34 +107,55 @@ export class RequestBatch<
    *   ],
    *   adapter
    * );
+   * const results: User[] = await batch.execute();
    *
-   * const results = await batch.execute();
+   * // Heterogeneous batch - each request returns a different type
+   * const heterogeneousBatch = RequestBatch.batch(
+   *   [
+   *     { config: { url: '/api/users/1', method: 'GET' }, mapper: (r) => r.json() as Promise<User> },
+   *     { config: { url: '/api/products/1', method: 'GET' }, mapper: (r) => r.json() as Promise<Product> },
+   *     { config: { url: '/api/orders/1', method: 'GET' }, mapper: (r) => r.json() as Promise<Order> }
+   *   ],
+   *   adapter
+   * );
+   * const results: [User, Product, Order] = await heterogeneousBatch.execute();
    * ```
    */
   public static batch = <
-    Out,
+    Stages extends readonly (
+      | PipelineRequestStage<AdapterExecutionResult, any, RequestConfig>
+      | PipelineManagerStage<any, AdapterExecutionResult, RequestConfig>
+    )[],
     AdapterExecutionResult,
     RequestConfig extends IRequestConfig = IRequestConfig,
   >(
-    stages: Array<
-      | PipelineRequestStage<AdapterExecutionResult, Out, RequestConfig>
-      | PipelineManagerStage<Out, AdapterExecutionResult, RequestConfig>
-    >,
+    stages: Stages,
     adapter: RequestAdapter<AdapterExecutionResult, RequestConfig>
-  ): RequestBatch<Out[], AdapterExecutionResult, RequestConfig> => {
+  ): RequestBatch<
+    StagesToTuple<Stages>,
+    AdapterExecutionResult,
+    RequestConfig
+  > => {
     const batch = new RequestBatch<
-      Out[],
+      StagesToTuple<Stages>,
       AdapterExecutionResult,
       RequestConfig
     >();
     batch.setRequestAdapter(adapter);
-    // Type assertion needed: stages return Out (element type), batch collects into Out[]
-    batch.addAll(
-      stages as Array<
-        | PipelineRequestStage<AdapterExecutionResult, Out[], RequestConfig>
-        | PipelineManagerStage<Out[], AdapterExecutionResult, RequestConfig>
-      >
-    );
+    // Type assertion needed: stages have individual types, but we store them as any for internal processing
+    // Convert readonly array to mutable array for addAll
+    batch.addAll([...stages] as Array<
+      | PipelineRequestStage<
+          AdapterExecutionResult,
+          StagesToTuple<Stages>[number],
+          RequestConfig
+        >
+      | PipelineManagerStage<
+          StagesToTuple<Stages>[number],
+          AdapterExecutionResult,
+          RequestConfig
+        >
+    >);
     return batch;
   };
 
@@ -134,19 +196,22 @@ export class RequestBatch<
    * Executes all requests in the batch in parallel (or with concurrency limit if set) and returns all results.
    * Handles errors and calls registered handlers appropriately.
    *
-   * Note: For batches, the generic type `Out` should be an array type (e.g., `RequestBatch<User[], ...>`)
-   * to properly type the returned array of results.
+   * For homogeneous batches, `Out` should be an array type (e.g., `User[]`).
+   * For heterogeneous batches, `Out` should be a tuple type (e.g., `[User, Product, Order]`).
    *
-   * @returns A promise that resolves to an array of all results (typed as Out, which should be Out[])
+   * @returns A promise that resolves to an array or tuple of all results (typed as Out)
    * @throws {Error} If an error occurs and no error handler is registered
    */
   public execute = async (): Promise<Out> => {
     try {
-      const results: Out[] = await this.executeAllRequests(this.requestList);
+      // Execute all requests - results will be in order
+      const results = await this.executeAllRequestsHeterogeneous(
+        this.requestList
+      );
       if (this.resultHandler && results.length > 0) {
-        this.resultHandler(results);
+        this.resultHandler(results as Out | Out[]);
       }
-      // Cast to Out - for batches, Out should be typed as the array type (e.g., User[])
+      // Cast to Out - preserves tuple types for heterogeneous batches
       return results as unknown as Out;
     } catch (error) {
       if (this.errorHandler) {
@@ -165,45 +230,52 @@ export class RequestBatch<
   /**
    * Executes all request entities in parallel (or with concurrency limit if set), handling preconditions and mappers.
    * Stages with failed preconditions are skipped.
+   * This method preserves individual types for each stage, enabling heterogeneous batches.
    *
-   * @template Out - The output type
    * @param requestEntityList - List of pipeline stages to execute
-   * @returns A promise that resolves to an array of all stage results
+   * @returns A promise that resolves to an array of all stage results (preserves tuple types)
    */
-  private executeAllRequests = async <Out>(
+  private executeAllRequestsHeterogeneous = async (
     requestEntityList: (
-      | PipelineRequestStage<AdapterExecutionResult, Out, RequestConfig>
-      | PipelineManagerStage<Out, AdapterExecutionResult, RequestConfig>
+      | PipelineRequestStage<AdapterExecutionResult, any, RequestConfig>
+      | PipelineManagerStage<any, AdapterExecutionResult, RequestConfig>
     )[]
-  ): Promise<Out[]> => {
+  ): Promise<any[]> => {
     // Filter out stages that don't meet their preconditions
     const stagesToExecute = requestEntityList.filter(
       (stage) => !stage.precondition || stage.precondition()
     );
 
+    // Track original indices to preserve order (important for tuple types)
+    const stageIndices = stagesToExecute.map((_, index) => {
+      const originalIndex = requestEntityList.indexOf(stagesToExecute[index]);
+      return originalIndex >= 0 ? originalIndex : index;
+    });
+
     // Create promise factories (not promises yet) to control when they start
     const promiseFactories = stagesToExecute.map(
-      (requestEntity) => async () => {
+      (requestEntity, localIndex) => async () => {
         try {
-          const result = await this.executeSingle<Out>(
+          // Execute the stage - type is inferred from the stage itself
+          const result = await this.executeSingleHeterogeneous(
             requestEntity,
             undefined
           );
 
           // Apply mapper if provided
-          let mappedResult: Out = result;
+          let mappedResult = result;
           if (requestEntity.mapper) {
-            let mapperResult: Out | Promise<Out>;
+            let mapperResult: any;
             if (isPipelineRequestStage(requestEntity)) {
               mapperResult = requestEntity.mapper(
                 result as unknown as AdapterExecutionResult,
                 undefined
-              ) as Out | Promise<Out>;
+              );
             } else if (isPipelineManagerStage(requestEntity)) {
               mapperResult = requestEntity.mapper(
-                result as unknown as Out,
+                result as unknown as any,
                 undefined
-              ) as Out | Promise<Out>;
+              );
             } else {
               mapperResult = result;
             }
@@ -220,8 +292,8 @@ export class RequestBatch<
           }
 
           // Store result on the entity
-          requestEntity.result = mappedResult as Out;
-          return mappedResult;
+          requestEntity.result = mappedResult;
+          return { index: stageIndices[localIndex], result: mappedResult };
         } catch (error) {
           const requestConfig = isPipelineRequestStage(requestEntity)
             ? requestEntity.config
@@ -236,104 +308,113 @@ export class RequestBatch<
     );
 
     // Execute with concurrency limit if set, otherwise execute all in parallel
+    let results: Array<{ index: number; result: any }>;
     if (this.concurrency !== undefined && this.concurrency > 0) {
-      return this.executeWithConcurrencyLimit(
+      results = await this.executeWithConcurrencyLimitHeterogeneous(
         promiseFactories,
         this.concurrency
       );
     } else {
       // Execute all promises in parallel
       const promises = promiseFactories.map((factory) => factory());
-      return Promise.all(promises);
+      results = await Promise.all(promises);
     }
+
+    // Sort results by original index to preserve order (critical for tuple types)
+    results.sort((a, b) => a.index - b.index);
+
+    // Return results in the correct order, preserving tuple structure
+    return results.map((r) => r.result);
   };
 
   /**
    * Executes promise factories with a concurrency limit.
    * Processes promises in batches, ensuring only a limited number run concurrently.
+   * This version preserves index information for tuple type support.
    *
-   * @template Out - The output type
    * @param promiseFactories - Array of functions that return promises when called
    * @param limit - Maximum number of concurrent promises to execute
-   * @returns A promise that resolves to an array of all results
+   * @returns A promise that resolves to an array of results with index information
    */
-  private executeWithConcurrencyLimit = async <Out>(
-    promiseFactories: Array<() => Promise<Out>>,
+  private executeWithConcurrencyLimitHeterogeneous = async (
+    promiseFactories: Array<() => Promise<{ index: number; result: any }>>,
     limit: number
-  ): Promise<Out[]> => {
-    const results: Out[] = new Array(promiseFactories.length);
+  ): Promise<Array<{ index: number; result: any }>> => {
+    const results: Array<{ index: number; result: any }> = new Array(
+      promiseFactories.length
+    );
     let currentIndex = 0;
     let completedCount = 0;
     let activeCount = 0;
 
-    return new Promise<Out[]>((resolve, reject) => {
-      // Start the next promise if we haven't exceeded the limit
-      const startNext = () => {
-        // Don't start more if we've reached the limit or run out of promises
-        if (activeCount >= limit || currentIndex >= promiseFactories.length) {
-          return;
+    return new Promise<Array<{ index: number; result: any }>>(
+      (resolve, reject) => {
+        // Start the next promise if we haven't exceeded the limit
+        const startNext = () => {
+          // Don't start more if we've reached the limit or run out of promises
+          if (activeCount >= limit || currentIndex >= promiseFactories.length) {
+            return;
+          }
+
+          const localIndex = currentIndex++;
+          const factory = promiseFactories[localIndex];
+          activeCount++;
+
+          // Execute the promise factory
+          factory()
+            .then((result) => {
+              results[localIndex] = result;
+              completedCount++;
+              activeCount--;
+
+              // If all promises are completed, resolve
+              if (completedCount === promiseFactories.length) {
+                resolve(results);
+              } else {
+                // Otherwise, start the next promise
+                startNext();
+              }
+            })
+            .catch((error) => {
+              activeCount--;
+              reject(error);
+            });
+        };
+
+        // Start initial batch up to the concurrency limit
+        for (let i = 0; i < Math.min(limit, promiseFactories.length); i++) {
+          startNext();
         }
-
-        const index = currentIndex++;
-        const factory = promiseFactories[index];
-        activeCount++;
-
-        // Execute the promise factory
-        factory()
-          .then((result) => {
-            results[index] = result;
-            completedCount++;
-            activeCount--;
-
-            // If all promises are completed, resolve
-            if (completedCount === promiseFactories.length) {
-              resolve(results);
-            } else {
-              // Otherwise, start the next promise
-              startNext();
-            }
-          })
-          .catch((error) => {
-            activeCount--;
-            reject(error);
-          });
-      };
-
-      // Start initial batch up to the concurrency limit
-      for (let i = 0; i < Math.min(limit, promiseFactories.length); i++) {
-        startNext();
       }
-    });
+    );
   };
 
   /**
    * Executes a single request entity (stage).
    * Handles both request stages and nested manager stages.
-   * Implements retry logic for request stages when retry configuration is provided.
-   * Supports progressive chunk processing for streaming responses.
+   * This version supports heterogeneous types by inferring the type from the stage.
    *
-   * @template Out - The output type
    * @param requestEntity - The pipeline stage to execute
    * @param previousResult - The result from the previous stage (optional, not used in batch)
-   * @returns A promise that resolves to the stage result
+   * @returns A promise that resolves to the stage result (type inferred from stage)
    * @throws {Error} If the stage type is unknown or all retries are exhausted
    */
-  private executeSingle = async <Out>(
+  private executeSingleHeterogeneous = async (
     requestEntity:
-      | PipelineRequestStage<AdapterExecutionResult, Out, RequestConfig>
-      | PipelineManagerStage<Out, AdapterExecutionResult, RequestConfig>,
-    previousResult?: Out
-  ): Promise<Out> => {
+      | PipelineRequestStage<AdapterExecutionResult, any, RequestConfig>
+      | PipelineManagerStage<any, AdapterExecutionResult, RequestConfig>,
+    previousResult?: any
+  ): Promise<any> => {
     if (isPipelineRequestStage(requestEntity)) {
       const { config, retry, chunkProcessing } = requestEntity;
       const requestConfig: RequestConfig =
         typeof config === "function"
-          ? (config(previousResult as Out) as RequestConfig)
+          ? (config(previousResult) as RequestConfig)
           : (config as RequestConfig);
 
       // If retry config is provided, wrap execution in retry logic
       if (retry) {
-        return this.executeWithRetry<Out>(
+        return this.executeWithRetry<any>(
           requestConfig,
           retry,
           chunkProcessing
@@ -343,10 +424,10 @@ export class RequestBatch<
       // Execute request and handle chunk processing if enabled
       const rawResult: AdapterExecutionResult =
         await this.adapter.executeRequest(requestConfig);
-      return this.processResultWithChunks<Out>(rawResult, chunkProcessing);
+      return this.processResultWithChunks<any>(rawResult, chunkProcessing);
     } else if (isPipelineManagerStage(requestEntity)) {
       const { request } = requestEntity;
-      const rawResult: Out = await request.execute();
+      const rawResult = await request.execute();
       return rawResult;
     } else {
       throw new Error("Unknown type");
@@ -541,10 +622,13 @@ function isPipelineManagerStage<
  * Creates a new RequestBatch with stages and adapter.
  * This is a convenience function that wraps RequestBatch.batch().
  *
- * @template Out - The output type (should be an array type, e.g., `User[]` for batches)
+ * Supports both homogeneous batches (all requests return the same type) and
+ * heterogeneous batches (each request can return a different type, using tuple types).
+ *
+ * @template Stages - The tuple of stages (inferred from the stages parameter)
  * @template AdapterExecutionResult - The type of result returned by the adapter
  * @template RequestConfig - The type of request configuration
- * @param stages - Array of pipeline stages (request or manager stages)
+ * @param stages - Array or tuple of pipeline stages (request or manager stages)
  * @param adapter - The request adapter to use for HTTP requests
  * @returns A new RequestBatch instance with the stages and adapter configured
  *
@@ -554,6 +638,8 @@ function isPipelineManagerStage<
  * import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
  *
  * const adapter = new FetchRequestAdapter();
+ *
+ * // Homogeneous batch - all requests return User
  * const batchInstance = batch(
  *   [
  *     { config: { url: '/api/users/1', method: 'GET' } },
@@ -562,20 +648,30 @@ function isPipelineManagerStage<
  *   ],
  *   adapter
  * );
+ * const results: User[] = await batchInstance.execute();
  *
- * const results = await batchInstance.execute();
+ * // Heterogeneous batch - each request returns a different type
+ * const heterogeneousBatch = batch(
+ *   [
+ *     { config: { url: '/api/users/1', method: 'GET' }, mapper: (r) => r.json() as Promise<User> },
+ *     { config: { url: '/api/products/1', method: 'GET' }, mapper: (r) => r.json() as Promise<Product> },
+ *     { config: { url: '/api/orders/1', method: 'GET' }, mapper: (r) => r.json() as Promise<Order> }
+ *   ],
+ *   adapter
+ * );
+ * const results: [User, Product, Order] = await heterogeneousBatch.execute();
  * ```
  */
 export function batch<
-  Out,
+  Stages extends readonly (
+    | PipelineRequestStage<AdapterExecutionResult, any, RequestConfig>
+    | PipelineManagerStage<any, AdapterExecutionResult, RequestConfig>
+  )[],
   AdapterExecutionResult,
   RequestConfig extends IRequestConfig = IRequestConfig,
 >(
-  stages: Array<
-    | PipelineRequestStage<AdapterExecutionResult, Out, RequestConfig>
-    | PipelineManagerStage<Out, AdapterExecutionResult, RequestConfig>
-  >,
+  stages: Stages,
   adapter: RequestAdapter<AdapterExecutionResult, RequestConfig>
-): RequestBatch<Out[], AdapterExecutionResult, RequestConfig> {
+): RequestBatch<StagesToTuple<Stages>, AdapterExecutionResult, RequestConfig> {
   return RequestBatch.batch(stages, adapter);
 }

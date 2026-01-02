@@ -1636,4 +1636,87 @@ describe("RequestBatch", () => {
       assert.strictEqual(results.length, 1);
     });
   });
+
+  describe("Heterogeneous batch results (tuple types)", () => {
+    test("should support batch requests with different return types", async () => {
+      resetFetchMock();
+      const user = { id: 1, name: "John" };
+      const product = { id: 1, title: "Product" };
+      const order = { id: 1, total: 100 };
+
+      fetchMock
+        .once(JSON.stringify(user))
+        .once(JSON.stringify(product))
+        .once(JSON.stringify(order));
+
+      const batchInstance = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            mapper: (result: Response) =>
+              JSON.parse((result as any).body) as typeof user,
+          },
+          {
+            config: { url: "http://example.com/products/1", method: "GET" },
+            mapper: (result: Response) =>
+              JSON.parse((result as any).body) as typeof product,
+          },
+          {
+            config: { url: "http://example.com/orders/1", method: "GET" },
+            mapper: (result: Response) =>
+              JSON.parse((result as any).body) as typeof order,
+          },
+        ],
+        new TestAdapter()
+      );
+
+      const results = await batchInstance.execute();
+      assert.strictEqual(results.length, 3);
+      // TypeScript should infer the tuple type [User, Product, Order]
+      assert.deepStrictEqual(results[0], user);
+      assert.deepStrictEqual(results[1], product);
+      assert.deepStrictEqual(results[2], order);
+    });
+
+    test("should preserve tuple types with nested batches", async () => {
+      resetFetchMock();
+      const user = { id: 1, name: "John" };
+      const product = { id: 1, title: "Product" };
+
+      fetchMock.once(JSON.stringify(user)).once(JSON.stringify(product));
+
+      const nestedBatch = batch(
+        [
+          {
+            config: { url: "http://example.com/users/1", method: "GET" },
+            mapper: (result: Response) =>
+              JSON.parse((result as any).body) as typeof user,
+          },
+        ],
+        new TestAdapter()
+      );
+
+      const batchInstance = batch(
+        [
+          {
+            request: nestedBatch,
+          },
+          {
+            config: { url: "http://example.com/products/1", method: "GET" },
+            mapper: (result: Response) =>
+              JSON.parse((result as any).body) as typeof product,
+          },
+        ],
+        new TestAdapter()
+      );
+
+      const results = await batchInstance.execute();
+      assert.strictEqual(results.length, 2);
+      // First result should be an array (from nested batch)
+      assert.ok(Array.isArray(results[0]));
+      assert.deepStrictEqual(results[0][0], user);
+      // Second result should be the product
+      assert.deepStrictEqual(results[1], product);
+    });
+  });
 });
