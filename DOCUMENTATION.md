@@ -2827,3 +2827,11 @@ mapper: (result) => {
 - Review the [API Reference](#api-reference) for detailed method signatures
 - Open an issue on [GitHub](https://github.com/dawidhermann/flow-conductor)
 
+## License
+
+MIT License
+
+Copyright (c) 2024 Dawid Hermann
+
+See [LICENSE](../LICENSE) for full license text.
+

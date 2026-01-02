@@ -381,4 +381,4 @@ See **[DOCUMENTATION.md](./DOCUMENTATION.md)**.
 
 ## License
 
-ISC
+MIT
