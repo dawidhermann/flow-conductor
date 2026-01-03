@@ -24,7 +24,7 @@ export type SuperagentRequestConfig = IRequestConfig & {};
  * );
  * ```
  */
-export default class SuperagentRequestAdapter extends RequestAdapter<
+export class SuperagentRequestAdapter extends RequestAdapter<
   Response,
   SuperagentRequestConfig
 > {
