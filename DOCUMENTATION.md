@@ -16,6 +16,125 @@ Flow-conductor is a **backend orchestration tool** for building complex API work
 - A React data fetching library (use React Query or RTK Query instead)
 - A caching solution (use Redis or similar)
 - A replacement for simple `fetch()` or `axios` calls
+- **A durable workflow engine** (like Temporal.io, AWS Step Functions, or Inngest)
+- **A transactional outbox pattern implementation**
+- **A state persistence or recovery system**
+
+### Important: Durability and Crash Recovery
+
+**Flow-conductor is an in-memory workflow orchestration library.** It does NOT provide durability guarantees or automatic crash recovery.
+
+#### What Happens on Server Crashes?
+
+If your server crashes **during** a workflow execution:
+
+1. **Workflow state is lost**: All in-memory state (intermediate results, progress) is lost
+2. **Partial execution may have occurred**: External APIs may have been called and state changed
+3. **No automatic recovery**: The workflow will NOT resume when the server restarts
+4. **Data consistency**: You may have partial state in external systems (e.g., order marked as "paid" but inventory not reserved)
+
+**Example scenario:**
+```typescript
+// If server crashes after step 2 completes but before step 3 starts:
+begin(
+  { config: { url: '/orders/123', method: 'PATCH', data: { status: 'paid' } } }, // ✅ Completed
+  adapter
+)
+.next({ config: { url: '/inventory/reserve', method: 'POST' } }) // ❌ Never executed
+.next({ config: { url: '/emails/send', method: 'POST' } }) // ❌ Never executed
+.execute();
+
+// Result: Order is marked as "paid" but inventory wasn't reserved
+// When server restarts, this workflow is gone - no automatic retry
+```
+
+#### Comparison to Durable Workflow Engines
+
+| Feature | flow-conductor | Temporal.io / Step Functions |
+|---------|----------------|------------------------------|
+| **State Persistence** | ❌ In-memory only | ✅ Persisted to database |
+| **Crash Recovery** | ❌ Workflow lost | ✅ Automatic resume from last checkpoint |
+| **Long-running Workflows** | ❌ Must complete in single process lifetime | ✅ Can span days/weeks |
+| **Guaranteed Execution** | ❌ Lost on crash | ✅ Eventually consistent |
+| **Use Case** | ✅ Synchronous, short-lived workflows | ✅ Long-running, durable workflows |
+| **Complexity** | ✅ Simple, lightweight | ⚠️ More complex setup |
+
+#### When to Use flow-conductor vs Durable Workflow Engines
+
+**Use flow-conductor when:**
+- ✅ Workflows complete in seconds/minutes (not hours/days)
+- ✅ Workflows are triggered synchronously (e.g., webhook handlers, API endpoints)
+- ✅ You can tolerate losing a workflow if the server crashes (e.g., webhook can be retried)
+- ✅ You want a simple, lightweight solution without external dependencies
+- ✅ You're building request orchestration, not long-running business processes
+
+**Use Temporal.io / Step Functions / Inngest when:**
+- ✅ Workflows must complete even if server crashes
+- ✅ Workflows can take hours or days to complete
+- ✅ You need guaranteed exactly-once execution
+- ✅ You need to resume workflows from checkpoints
+- ✅ You're building critical business processes (e.g., order fulfillment, payment processing)
+
+#### Transactional Outbox Pattern
+
+The **transactional outbox pattern** solves a different problem: ensuring that database changes and external API calls happen atomically. Flow-conductor does NOT implement this pattern.
+
+**If you need transactional guarantees:**
+- Use a transactional outbox pattern for database + external API consistency
+- Use flow-conductor for orchestrating the external API calls themselves
+- Consider combining both: use transactional outbox to queue workflow execution, then use flow-conductor to execute the workflow
+
+**Example combining transactional outbox + flow-conductor:**
+```typescript
+// 1. Transactional outbox ensures atomicity
+await db.transaction(async (tx) => {
+  await tx.insert('orders', orderData);
+  await tx.insert('outbox', { 
+    event: 'process_order',
+    payload: orderData 
+  });
+});
+
+// 2. Outbox processor picks up event and executes workflow
+// If server crashes here, outbox processor will retry
+const workflow = begin(/* ... */, adapter);
+await workflow.execute();
+```
+
+#### Best Practices for Crash Resilience
+
+If you need better crash resilience with flow-conductor:
+
+1. **Idempotent operations**: Design your API endpoints to be idempotent
+2. **External retry mechanisms**: Use webhook retries, message queues, or event sourcing
+3. **Compensation logic**: Implement rollback/compensation in error handlers
+4. **Checkpointing**: Manually persist critical state to database between steps if needed
+5. **Timeouts**: Set appropriate timeouts to prevent workflows from hanging indefinitely
+
+```typescript
+// Example: Manual checkpointing for critical workflows
+await begin(
+  { config: { url: '/orders/123', method: 'PATCH', data: { status: 'paid' } } },
+  adapter
+)
+.next({
+  config: async (prev) => {
+    // Manually save state to database before next step
+    await db.saveWorkflowState('order-123', { step: 2, orderId: 123 });
+    return { url: '/inventory/reserve', method: 'POST' };
+  }
+})
+.withErrorHandler(async (error) => {
+  // On error, check database for partial state and compensate
+  const state = await db.getWorkflowState('order-123');
+  if (state?.step === 2) {
+    await rollbackOrderStatus('order-123');
+  }
+})
+.execute();
+```
+
+**Summary**: Flow-conductor is designed for **synchronous, short-lived workflows** where simplicity and developer experience matter more than durability guarantees. For long-running, critical workflows that must survive crashes, use a dedicated durable workflow engine.
 
 ## Table of Contents
 
@@ -25,6 +144,7 @@ Flow-conductor is a **backend orchestration tool** for building complex API work
 - [API Reference](#api-reference)
 - [Common Patterns](#common-patterns)
 - [Security](#security)
+- [Best Practices](#best-practices)
 - [Troubleshooting](#troubleshooting)
 
 ## Basic Usage
@@ -505,14 +625,6 @@ const deleteResult = await begin(
   adapter
 ).execute();
 ```
-
-### 🚀 Production Checklist
-
-Before deploying to production, make sure you've addressed these critical items:
-
-- **Timeouts**: Did you configure a timeout? (Default is infinite!)
-- **Private IPs**: Are you running in Kubernetes/Docker? Set `allowPrivateIPs: true`.
-- **Error Handling**: Do you have a `.catch()` or `.withErrorHandler()` at the end of your chain?
 
 ## Advanced Features
 
@@ -1400,7 +1512,530 @@ await begin(
   .executeAll();
 ```
 
+### RequestBatch
+
+`RequestBatch` allows you to execute multiple requests in parallel (or with a concurrency limit). Unlike `RequestChain`, which executes requests sequentially, `RequestBatch` executes all requests simultaneously and returns an array of results.
+
+#### Basic RequestBatch Usage
+
+Execute multiple requests in parallel:
+
+```typescript
+import { batch } from '@flow-conductor/core';
+import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
+
+const adapter = new FetchRequestAdapter();
+
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' }
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' }
+  },
+  {
+    config: { url: 'https://api.example.com/users/3', method: 'GET' }
+  }
+], adapter);
+
+// Execute all requests in parallel
+const results = await batchInstance.execute();
+console.log(results.length); // 3
+console.log(await results[0].json()); // First user
+console.log(await results[1].json()); // Second user
+console.log(await results[2].json()); // Third user
+```
+
+#### Concurrency Limiting
+
+Control how many requests execute simultaneously using `withConcurrency()`:
+
+```typescript
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' }
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' }
+  },
+  {
+    config: { url: 'https://api.example.com/users/3', method: 'GET' }
+  }
+], adapter);
+batchInstance.withConcurrency(2); // Execute max 2 requests at a time
+
+const results = await batchInstance.execute();
+// Requests execute in batches: [1, 2] then [3]
+```
+
+#### RequestBatch with Mappers
+
+Transform results from each request in the batch:
+
+```typescript
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => {
+      const data = await result.json();
+      return data; // Return parsed user object
+    }
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' },
+    mapper: async (result) => {
+      const data = await result.json();
+      return data;
+    }
+  }
+], adapter);
+
+const users = await batchInstance.execute();
+console.log(users[0].name); // "John Doe"
+console.log(users[1].name); // "Jane Doe"
+```
+
+#### Batch Request Types
+
+Flow-conductor supports two types of batch requests: **homogeneous** (all requests return the same type) and **heterogeneous** (each request can return a different type).
+
+##### Homogeneous Batches
+
+When all requests in a batch return the same type, TypeScript infers an array type:
+
+```typescript
+interface User {
+  id: number;
+  name: string;
+}
+
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => await result.json() as User
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' },
+    mapper: async (result) => await result.json() as User
+  },
+  {
+    config: { url: 'https://api.example.com/users/3', method: 'GET' },
+    mapper: async (result) => await result.json() as User
+  }
+], adapter);
+
+// TypeScript infers: User[]
+const users = await batchInstance.execute();
+console.log(users[0].name); // TypeScript knows this is a User
+console.log(users[1].name); // TypeScript knows this is a User
+```
+
+##### Heterogeneous Batches (Tuple Types)
+
+When each request returns a different type, TypeScript infers a **tuple type** that preserves the individual types at each position:
+
+```typescript
+interface User {
+  id: number;
+  name: string;
+}
+
+interface Product {
+  id: number;
+  title: string;
+  price: number;
+}
+
+interface Order {
+  id: number;
+  total: number;
+  items: number[];
+}
+
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => await result.json() as User
+  },
+  {
+    config: { url: 'https://api.example.com/products/1', method: 'GET' },
+    mapper: async (result) => await result.json() as Product
+  },
+  {
+    config: { url: 'https://api.example.com/orders/1', method: 'GET' },
+    mapper: async (result) => await result.json() as Order
+  }
+], adapter);
+
+// TypeScript infers: [User, Product, Order]
+const results = await batchInstance.execute();
+
+// TypeScript knows the exact type at each position:
+const user: User = results[0];      // ✅ Type-safe: results[0] is User
+const product: Product = results[1]; // ✅ Type-safe: results[1] is Product
+const order: Order = results[2];      // ✅ Type-safe: results[2] is Order
+
+console.log(user.name);        // TypeScript autocomplete works
+console.log(product.title);    // TypeScript autocomplete works
+console.log(order.total);      // TypeScript autocomplete works
+```
+
+**Key Benefits of Tuple Types:**
+
+- **Type Safety**: Each position in the result array has its own type
+- **Autocomplete**: IDE provides accurate autocomplete for each result
+- **Compile-time Checks**: TypeScript catches type errors at compile time
+- **Order Preservation**: The tuple type preserves the order of requests
+
+**When to Use:**
+
+- **Homogeneous batches**: When all requests fetch the same type of resource (e.g., multiple users, multiple products)
+- **Heterogeneous batches**: When fetching different types of resources in parallel (e.g., user profile, product catalog, shopping cart)
+
+**Note:** Tuple types are automatically inferred from the stages you provide. You don't need to explicitly specify the tuple type - TypeScript will infer it from your mappers and stage configurations.
+
+#### RequestBatch with Error Handling
+
+Handle errors for the entire batch or individual requests:
+
+```typescript
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    errorHandler: (error) => {
+      console.error('Failed to fetch user 1:', error.message);
+    }
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' }
+  }
+], adapter);
+
+batchInstance.withErrorHandler((error) => {
+  console.error('Batch execution failed:', error.message);
+});
+
+const results = await batchInstance.execute();
+```
+
+#### RequestBatch with Result Handlers
+
+Handle successful batch execution:
+
+```typescript
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' }
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' }
+  }
+], adapter);
+
+batchInstance.withResultHandler(async (results) => {
+  console.log(`Successfully fetched ${results.length} users`);
+  for (const result of results) {
+    const user = await result.json();
+    console.log(`User: ${user.name}`);
+  }
+});
+
+await batchInstance.execute();
+```
+
+#### Real-World Example: Heterogeneous Batch
+
+Here's a practical example of using heterogeneous batches to fetch different types of data in parallel:
+
+```typescript
+interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+}
+
+interface UserPreferences {
+  theme: 'light' | 'dark';
+  notifications: boolean;
+}
+
+interface UserActivity {
+  lastLogin: string;
+  totalLogins: number;
+}
+
+// Fetch user profile, preferences, and activity in parallel
+const batchInstance = batch([
+  {
+    config: { url: `/api/users/${userId}/profile`, method: 'GET' },
+    mapper: async (result) => await result.json() as UserProfile
+  },
+  {
+    config: { url: `/api/users/${userId}/preferences`, method: 'GET' },
+    mapper: async (result) => await result.json() as UserPreferences
+  },
+  {
+    config: { url: `/api/users/${userId}/activity`, method: 'GET' },
+    mapper: async (result) => await result.json() as UserActivity
+  }
+], adapter);
+
+// TypeScript infers: [UserProfile, UserPreferences, UserActivity]
+const [profile, preferences, activity] = await batchInstance.execute();
+
+// All variables are properly typed:
+console.log(profile.name);           // ✅ TypeScript knows this is a string
+console.log(preferences.theme);      // ✅ TypeScript knows this is 'light' | 'dark'
+console.log(activity.totalLogins);   // ✅ TypeScript knows this is a number
+```
+
+This approach is more efficient than sequential requests and provides better type safety than using a union type array.
+
 ### Nested Request Managers
+
+Flow-conductor supports nesting `RequestBatch` inside `RequestChain` and `RequestChain` inside `RequestBatch`. This allows you to combine sequential and parallel execution patterns in powerful ways.
+
+#### Nesting RequestBatch inside RequestChain
+
+Execute a batch of parallel requests as a stage in a sequential chain:
+
+```typescript
+import { begin, batch } from '@flow-conductor/core';
+import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
+
+const adapter = new FetchRequestAdapter();
+
+// Create a batch that fetches multiple users in parallel
+const userBatch = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => await result.json()
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' },
+    mapper: async (result) => await result.json()
+  }
+], adapter);
+
+// Chain that uses the batch, then processes the results
+const result = await begin(
+  {
+    request: userBatch // Nested batch executes first
+  },
+  adapter
+)
+  .next({
+    config: async (previousResult) => {
+      // previousResult is the array of users from the batch
+      const userIds = previousResult.map(user => user.id).join(',');
+      return {
+        url: `https://api.example.com/posts?userIds=${userIds}`,
+        method: 'GET'
+      };
+    }
+  })
+  .execute();
+
+const posts = await result.json();
+console.log(posts);
+```
+
+#### Nesting RequestBatch with Mapper
+
+Transform the batch result before passing it to the next stage:
+
+```typescript
+const userBatch = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => await result.json()
+  },
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' },
+    mapper: async (result) => await result.json()
+  }
+], adapter);
+
+const result = await begin(
+  {
+    request: userBatch,
+    mapper: (users: User[]) => {
+      // Transform batch result - extract user names
+      return users.map(user => user.name).join(', ');
+    }
+  },
+  adapter
+)
+  .next({
+    config: (previousResult) => {
+      // previousResult is now the string "John Doe, Jane Doe"
+      return {
+        url: `https://api.example.com/search?q=${previousResult}`,
+        method: 'GET'
+      };
+    }
+  })
+  .execute();
+```
+
+#### Nesting RequestBatch with Previous Result Dependency
+
+Use results from previous chain stages to build the batch:
+
+```typescript
+// First stage gets a user
+const result = await begin(
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => await result.json()
+  },
+  adapter
+)
+  .next({
+    config: async (previousResult) => {
+      // Create a batch that depends on the previous result
+      const userBatch = batch([
+        {
+          config: {
+            url: `https://api.example.com/users/${previousResult.id}/posts`,
+            method: 'GET'
+          },
+          mapper: async (result) => await result.json()
+        },
+        {
+          config: {
+            url: `https://api.example.com/users/${previousResult.id}/comments`,
+            method: 'GET'
+          },
+          mapper: async (result) => await result.json()
+        }
+      ], adapter);
+      
+      return { request: userBatch };
+    }
+  })
+  .next({
+    config: (previousResult) => {
+      // previousResult is the array from the nested batch
+      return {
+        url: 'https://api.example.com/process',
+        method: 'POST',
+        data: { posts: previousResult }
+      };
+    }
+  })
+  .execute();
+```
+
+#### Nesting RequestChain inside RequestBatch
+
+Execute multiple sequential chains in parallel:
+
+```typescript
+import { begin, batch } from '@flow-conductor/core';
+import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
+
+const adapter = new FetchRequestAdapter();
+
+// Create sequential chains
+const chain1 = begin(
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (result) => await result.json()
+  },
+  adapter
+).next({
+  config: (prev) => ({
+    url: `https://api.example.com/users/${prev.id}/posts`,
+    method: 'GET'
+  }),
+  mapper: async (result) => await result.json()
+});
+
+const chain2 = begin(
+  {
+    config: { url: 'https://api.example.com/users/2', method: 'GET' },
+    mapper: async (result) => await result.json()
+  },
+  adapter
+).next({
+  config: (prev) => ({
+    url: `https://api.example.com/users/${prev.id}/posts`,
+    method: 'GET'
+  }),
+  mapper: async (result) => await result.json()
+});
+
+// Execute both chains in parallel
+const batchInstance = batch([
+  { request: chain1 },
+  { request: chain2 }
+], adapter);
+
+const results = await batchInstance.execute();
+// results[0] contains posts from user 1
+// results[1] contains posts from user 2
+```
+
+#### Nesting RequestChain with Concurrency Limit
+
+Control how many nested chains execute simultaneously:
+
+```typescript
+const batchInstance = batch([
+  { request: chain1 },
+  { request: chain2 },
+  { request: chain3 },
+  { request: chain4 }
+], adapter);
+batchInstance.withConcurrency(2); // Execute max 2 chains at a time
+
+const results = await batchInstance.execute();
+// Chains execute in batches: [chain1, chain2] then [chain3, chain4]
+```
+
+#### Deep Nesting
+
+You can nest multiple levels deep:
+
+```typescript
+// Batch within chain within batch
+const innerBatch = batch([
+  { config: { url: 'https://api.example.com/users/1', method: 'GET' } },
+  { config: { url: 'https://api.example.com/users/2', method: 'GET' } }
+], adapter);
+
+const middleChain = begin(
+  { request: innerBatch },
+  adapter
+).next({
+  config: (prev) => ({
+    url: 'https://api.example.com/process',
+    method: 'POST',
+    data: { users: prev }
+  })
+});
+
+const outerBatch = batch([
+  { request: middleChain },
+  {
+    config: { url: 'https://api.example.com/other', method: 'GET' }
+  }
+], adapter);
+
+const results = await outerBatch.execute();
+```
+
+#### Key Points About Nesting
+
+- **RequestBatch nested in RequestChain**: The batch executes and returns an array or tuple. The next stage receives this array/tuple as `previousResult`.
+- **RequestChain nested in RequestBatch**: The chain executes sequentially and returns its final result. The batch collects all chain results into an array or tuple.
+- **Mappers work at each level**: You can transform results at the batch level, chain level, or individual request level.
+- **Error handling**: Error handlers can be set at the batch level, chain level, or individual request level.
+- **Type preservation**: Tuple types are preserved when nesting heterogeneous batches, providing type safety throughout nested structures.
+- **Type safety**: TypeScript correctly infers types through nested structures. For heterogeneous batches, tuple types are preserved, providing type safety at each position in the result array.
+
+Chain request managers together. Nested chains can also use previous results:
 
 Chain request managers together. Nested chains can also use previous results:
 
@@ -1852,576 +2487,16 @@ For a complete guide on creating adapters, see the [adapter template](./packages
 
 ## Common Patterns
 
-### Webhook Processing Pipeline
-
-A common use case for flow-conductor is processing webhooks that require multiple sequential API calls:
-
-```typescript
-import { begin } from '@flow-conductor/core';
-import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
-
-const adapter = new FetchRequestAdapter();
-
-async function processPaymentWebhook(paymentId: string) {
-  return begin(
-    {
-      config: {
-        url: `/api/payments/${paymentId}`,
-        method: 'GET'
-      }
-    },
-    adapter
-  )
-    .next({
-      config: async (prev) => {
-        const payment = await prev.json();
-        return {
-          url: `/api/orders/${payment.orderId}`,
-          method: 'PATCH',
-          data: { status: 'paid', paymentId: payment.id }
-        };
-      }
-    })
-    .next({
-      config: async (prev) => {
-        const order = await prev.json();
-        return {
-          url: '/api/inventory/reserve',
-          method: 'POST',
-          data: { orderId: order.id, items: order.items }
-        };
-      }
-    })
-    .next({
-      config: async (prev) => {
-        const order = await prev.json();
-        return {
-          url: '/api/emails/send',
-          method: 'POST',
-          data: {
-            to: order.customer.email,
-            template: 'order-confirmation',
-            orderId: order.id
-          }
-        };
-      }
-    })
-    .withErrorHandler(async (error) => {
-      // Centralized error handling with compensation
-      await logError('payment-webhook', error);
-      if (error.step === 'inventory') {
-        // Rollback order status
-        await fetch(`/api/orders/${error.context.orderId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'pending' })
-        });
-      }
-    })
-    .withFinishHandler(() => {
-      metrics.increment('webhook.payment.processed');
-    })
-    .execute();
-}
-```
-
-### Authentication Flow
-
-```typescript
-import { begin } from '@flow-conductor/core';
-import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
-
-const adapter = new FetchRequestAdapter();
-
-// Login and use token for subsequent requests
-const userData = await begin(
-  {
-    config: {
-      url: 'https://api.example.com/auth/login',
-      method: 'POST',
-      data: { username: 'user', password: 'pass' }
-    }
-  },
-  adapter
-)
-  .next({
-    config: async (previousResult) => {
-      const auth = await previousResult.json();
-      return {
-        url: 'https://api.example.com/user/profile',
-        method: 'GET',
-        headers: { Authorization: `Bearer ${auth.token}` }
-      };
-    }
-  })
-  .execute();
-
-console.log(await userData.json());
-```
-
-### Data Aggregation
-
-```typescript
-import { begin } from '@flow-conductor/core';
-import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
-
-const adapter = new FetchRequestAdapter();
-
-// Fetch user, then their posts, then comments
-const allData = await begin(
-  {
-    config: { url: 'https://api.example.com/users/1', method: 'GET' }
-  },
-  adapter
-)
-  .next({
-    config: async (previousResult) => {
-      const user = await previousResult.json();
-      return {
-        url: `https://api.example.com/users/${user.id}/posts`,
-        method: 'GET'
-      };
-    }
-  })
-  .next({
-    config: async (previousResult) => {
-      const posts = await previousResult.json();
-      return {
-        url: `https://api.example.com/posts/${posts[0].id}/comments`,
-        method: 'GET'
-      };
-    }
-  })
-  .executeAll();
-
-const [user, posts, comments] = await Promise.all([
-  allData[0].json(),
-  allData[1].json(),
-  allData[2].json()
-]);
-
-console.log({ user, posts, comments });
-```
-
-### The Accumulator Pattern (Passing Context)
-
-Sometimes a later stage needs data from an earlier stage. Instead of relying on external variables or re-fetching data, you can accumulate context in your mappers and pass it through the chain. This is called the **accumulator pattern**.
-
-#### Basic Accumulator Pattern
-
-Build up an object containing all the data you need:
-
-```typescript
-import { begin } from '@flow-conductor/core';
-import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
-
-const adapter = new FetchRequestAdapter();
-
-const result = await begin(
-  {
-    config: { url: '/users/1', method: 'GET' },
-    // Return an object containing the context you want to pass down
-    mapper: async (res) => {
-      const user = await res.json();
-      return { user };
-    }
-  },
-  adapter
-)
-  .next({
-    config: (prev) => {
-      // prev is { user: {...} }
-      return {
-        url: `/users/${prev.user.id}/orders`,
-        method: 'GET'
-      };
-    },
-    // Merge previous context with new result
-    mapper: async (res, prev) => {
-      const orders = await res.json();
-      return {
-        ...prev, // Keep user data
-        orders   // Add orders
-      };
-    }
-  })
-  .next({
-    config: (prev) => {
-      // Now you have access to both user and orders!
-      console.log(`Processing for ${prev.user.name} with ${prev.orders.length} orders`);
-      return {
-        url: '/final-step',
-        method: 'POST',
-        data: {
-          userId: prev.user.id,
-          orderCount: prev.orders.length,
-          totalAmount: prev.orders.reduce((sum, order) => sum + order.total, 0)
-        }
-      };
-    }
-  })
-  .execute();
-```
-
-#### Why Use the Accumulator Pattern?
-
-**Without accumulator pattern** - Re-fetching or using external variables:
-
-```typescript
-// ❌ Bad: Re-fetching data
-.next({
-  config: async (prev) => {
-    const user = await fetch('/users/1').then(r => r.json()); // Re-fetch!
-    const orders = await prev.json();
-    return { url: `/process/${user.id}`, method: 'POST' };
-  }
-})
-
-// ❌ Bad: Using external variables
-let userData; // External variable
-.begin({ config: {...}, mapper: (r) => { userData = await r.json(); } })
-.next({ config: (prev) => { /* use userData */ } })
-```
-
-**With accumulator pattern** - Clean, type-safe, no side effects:
-
-```typescript
-// ✅ Good: Accumulate data through the chain
-.begin({
-  config: {...},
-  mapper: async (r) => ({ user: await r.json() })
-})
-.next({
-  config: (prev) => { /* prev.user is available */ },
-  mapper: async (r, prev) => ({ ...prev, orders: await r.json() })
-})
-.next({
-  config: (prev) => { /* prev.user AND prev.orders available */ }
-})
-```
-
-#### Type Safety with Accumulator Pattern
-
-TypeScript correctly infers types through the accumulator pattern:
-
-```typescript
-interface User {
-  id: number;
-  name: string;
-  email: string;
-}
-
-interface Order {
-  id: number;
-  total: number;
-  items: string[];
-}
-
-const result = await begin<{ user: User }, Response, IRequestConfig>(
-  {
-    config: { url: '/users/1', method: 'GET' },
-    mapper: async (res) => ({ user: await res.json() })
-  },
-  adapter
-)
-  .next<{ user: User; orders: Order[] }>({
-    config: (prev) => {
-      // TypeScript knows prev.user exists and has type User
-      return { url: `/users/${prev.user.id}/orders`, method: 'GET' };
-    },
-    mapper: async (res, prev) => {
-      // TypeScript knows prev.user is User type
-      const orders = await res.json();
-      return { ...prev, orders };
-    }
-  })
-  .next<{ user: User; orders: Order[] }>({
-    config: (prev) => {
-      // TypeScript knows prev has both user (User) and orders (Order[])
-      return {
-        url: '/process',
-        method: 'POST',
-        data: {
-          userName: prev.user.name,      // ✅ Type-safe
-          orderCount: prev.orders.length  // ✅ Type-safe
-        }
-      };
-    }
-  })
-  .execute();
-```
-
-#### Real-World Example: Order Processing
-
-Here's a complete example showing how to accumulate order processing context:
-
-```typescript
-async function processOrder(orderId: string) {
-  return begin(
-    {
-      config: { url: `/orders/${orderId}`, method: 'GET' },
-      mapper: async (res) => {
-        const order = await res.json();
-        return { order };
-      }
-    },
-    adapter
-  )
-    .next({
-      config: (prev) => ({
-        url: `/customers/${prev.order.customerId}`,
-        method: 'GET'
-      }),
-      mapper: async (res, prev) => {
-        const customer = await res.json();
-        return {
-          ...prev,
-          customer
-        };
-      }
-    })
-    .next({
-      config: (prev) => ({
-        url: `/inventory/check`,
-        method: 'POST',
-        data: {
-          items: prev.order.items.map(item => item.productId)
-        }
-      }),
-      mapper: async (res, prev) => {
-        const inventory = await res.json();
-        return {
-          ...prev,
-          inventory
-        };
-      }
-    })
-    .next({
-      config: (prev) => {
-        // All context available: order, customer, inventory
-        return {
-          url: '/orders/fulfill',
-          method: 'POST',
-          data: {
-            orderId: prev.order.id,
-            customerEmail: prev.customer.email,
-            items: prev.inventory.availableItems
-          }
-        };
-      }
-    })
-    .execute();
-}
-```
-
-**Benefits:**
-- ✅ No external variables or closures needed
-- ✅ Type-safe access to accumulated data
-- ✅ Easy to test - each stage is independent
-- ✅ Clear data flow - see exactly what data is available at each stage
-- ✅ No re-fetching - data flows through the chain efficiently
-
-### Error Recovery
-
-Flow-conductor provides multiple ways to handle errors:
-
-#### Chain-Level Error Recovery
-
-Handle errors for the entire chain:
-
-```typescript
-import { begin } from '@flow-conductor/core';
-import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
-
-const adapter = new FetchRequestAdapter();
-
-try {
-  const result = await begin(
-    {
-      config: { url: 'https://api.example.com/users', method: 'GET' }
-    },
-    adapter
-  )
-    .withErrorHandler((error) => {
-      // Log error but don't throw
-      console.error('Request failed:', error);
-      // Access request configuration from error.cause
-      const requestConfig = error.cause?.requestConfig;
-      if (requestConfig) {
-        console.error('Failed request details:', {
-          url: requestConfig.url,
-          method: requestConfig.method
-        });
-      }
-    })
-    .execute();
-  
-  console.log(await result.json());
-} catch (error) {
-  // Handle final error if needed
-  console.error('Chain execution failed:', error);
-}
-```
-
-#### Stage-Level Error Recovery
-
-Handle errors for individual stages with stage-specific recovery logic:
-
-```typescript
-import { begin } from '@flow-conductor/core';
-import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
-
-const adapter = new FetchRequestAdapter();
-
-try {
-  const result = await begin(
-    {
-      config: { url: 'https://api.example.com/users/1', method: 'GET' },
-      errorHandler: async (error) => {
-        // Stage-specific error handling
-        console.error('Failed to fetch user:', error.message);
-        // Access request configuration from error.cause
-        const requestConfig = error.cause?.requestConfig;
-        await logError('user-fetch', error, requestConfig);
-      }
-    },
-    adapter
-  )
-    .next({
-      config: { url: 'https://api.example.com/users/1/posts', method: 'GET' },
-      errorHandler: async (error) => {
-        // Different handling for posts stage
-        console.error('Failed to fetch posts:', error.message);
-        // Access request configuration from error.cause
-        const requestConfig = error.cause?.requestConfig;
-        await logError('posts-fetch', error, requestConfig);
-        // Could perform stage-specific cleanup or fallback
-      }
-    })
-    .withErrorHandler((error) => {
-      // Chain-level handler called after stage handlers
-      console.error('Chain failed:', error.message);
-      // Access request configuration from error.cause
-      const requestConfig = error.cause?.requestConfig;
-      if (requestConfig) {
-        console.error('Failed at:', requestConfig.url);
-      }
-    })
-    .execute();
-  
-  console.log(await result.json());
-} catch (error) {
-  // Final error handling
-  console.error('Execution failed:', error);
-}
-```
-
-#### Combining Stage and Chain Error Handlers
-
-Use both stage-level and chain-level handlers for comprehensive error handling:
-
-```typescript
-const result = await begin(
-  {
-    config: { url: 'https://api.example.com/users/1', method: 'GET' },
-    errorHandler: (error) => {
-      // Stage-specific: log, cleanup, or perform recovery
-      console.error('User fetch failed:', error);
-      // Access request configuration from error.cause
-      const requestConfig = error.cause?.requestConfig;
-      if (requestConfig) {
-        console.error('Failed request:', requestConfig.url);
-      }
-      // Could return a default value or perform fallback logic
-    }
-  },
-  adapter
-)
-  .next({
-    config: { url: 'https://api.example.com/users/1/posts', method: 'GET' },
-    errorHandler: (error) => {
-      // Stage-specific: handle posts fetch failure
-      console.error('Posts fetch failed:', error);
-      // Access request configuration from error.cause
-      const requestConfig = error.cause?.requestConfig;
-      if (requestConfig) {
-        console.error('Failed request:', requestConfig.url);
-      }
-    }
-  })
-  .withErrorHandler((error) => {
-    // Chain-level: centralized error handling
-    // Called after stage handlers
-    metrics.increment('chain.errors');
-    // Access request configuration from error.cause
-    const requestConfig = error.cause?.requestConfig;
-    if (requestConfig) {
-      notifyAdmin('Chain execution failed', { error, failedAt: requestConfig.url });
-    } else {
-      notifyAdmin('Chain execution failed', error);
-    }
-  })
-  .execute();
-```
-
-### Retry with Exponential Backoff
-
-Handle transient failures with automatic retry and exponential backoff:
-
-```typescript
-import { begin } from '@flow-conductor/core';
-import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
-import { retryOnNetworkOrStatusCodes } from '@flow-conductor/core';
-
-const adapter = new FetchRequestAdapter();
-
-const result = await begin(
-  {
-    config: { url: 'https://api.example.com/users', method: 'GET' },
-    retry: {
-      maxRetries: 5,
-      retryDelay: 1000, // Start with 1 second
-      exponentialBackoff: true, // Double each time: 1s, 2s, 4s, 8s, 16s
-      maxDelay: 10000, // Cap at 10 seconds
-      retryCondition: retryOnNetworkOrStatusCodes(500, 502, 503, 504, 429)
-    }
-  },
-  adapter
-).execute();
-
-console.log(await result.json());
-```
-
-### Conditional Requests
-
-```typescript
-import { begin } from '@flow-conductor/core';
-import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
-
-const adapter = new FetchRequestAdapter();
-
-const shouldFetchPosts = true;
-
-const chain = begin(
-  {
-    config: { url: 'https://api.example.com/users/1', method: 'GET' }
-  },
-  adapter
-);
-
-if (shouldFetchPosts) {
-  chain.next({
-    config: async (previousResult) => {
-      const user = await previousResult.json();
-      return {
-        url: `https://api.example.com/users/${user.id}/posts`,
-        method: 'GET'
-      };
-    }
-  });
-}
-
-const result = await chain.execute();
-```
+Common patterns and use cases for flow-conductor are documented in a separate file. See [PATTERNS.md](./PATTERNS.md) for detailed examples including:
+
+- Webhook Processing Pipeline
+- Authentication Flow
+- Data Aggregation
+- The Accumulator Pattern (Passing Context)
+- Error Recovery
+- Retry with Exponential Backoff
+- Conditional Requests
+- Nested Batch and Chained Requests
 
 ## API Reference
 
@@ -2444,9 +2519,92 @@ The main class for creating and managing request chains.
 - `withErrorHandler(handler: ErrorHandler): RequestManager` - Set error handler
 - `withFinishHandler(handler: VoidFunction): RequestManager` - Set finish handler
 
+### RequestBatch
+
+A batch request manager that executes multiple requests in parallel (or with a concurrency limit). All requests are executed simultaneously (or in controlled batches), and results are returned as an array or tuple.
+
+#### Constructor
+
+- `new RequestBatch<Out, AdapterExecutionResult, RequestConfig>()` - Create a new RequestBatch instance
+  - `Out` - The output type:
+    - For **homogeneous batches**: an array type (e.g., `User[]` when all requests return `User`)
+    - For **heterogeneous batches**: a tuple type (e.g., `[User, Product, Order]` when each request returns a different type)
+  - `AdapterExecutionResult` - The type of result returned by the adapter
+  - `RequestConfig` - The type of request configuration
+
+#### Instance Methods
+
+- `setRequestAdapter(adapter: RequestAdapter): RequestBatch` - Set the request adapter
+- `addAll(stages: Array<PipelineRequestStage | PipelineManagerStage>): RequestBatch` - Add multiple requests to the batch
+- `withConcurrency(limit: number): RequestBatch` - Set the maximum number of concurrent requests (must be > 0)
+- `execute(): Promise<Out>` - Execute all requests in parallel (or with concurrency limit) and return all results as an array
+- `withResultHandler(handler: ResultHandler): RequestBatch` - Set result handler for successful batch execution
+- `withErrorHandler(handler: ErrorHandler): RequestBatch` - Set error handler for batch execution failures
+- `withFinishHandler(handler: VoidFunction): RequestBatch` - Set finish handler called after batch completion
+
+#### Examples
+
+**Homogeneous Batch (all requests return the same type):**
+
+```typescript
+import { batch } from '@flow-conductor/core';
+import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
+
+const adapter = new FetchRequestAdapter();
+
+const batchInstance = batch([
+  { config: { url: 'https://api.example.com/users/1', method: 'GET' } },
+  { config: { url: 'https://api.example.com/users/2', method: 'GET' } },
+  { config: { url: 'https://api.example.com/users/3', method: 'GET' } }
+], adapter);
+batchInstance.withConcurrency(5); // Optional: limit concurrent requests
+
+const results = await batchInstance.execute();
+// TypeScript infers: Response[] (or User[] if mappers are used)
+// Returns array of all results
+```
+
+**Heterogeneous Batch (each request returns a different type):**
+
+```typescript
+import { batch } from '@flow-conductor/core';
+import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
+
+interface User { id: number; name: string; }
+interface Product { id: number; title: string; }
+interface Order { id: number; total: number; }
+
+const adapter = new FetchRequestAdapter();
+
+const batchInstance = batch([
+  {
+    config: { url: 'https://api.example.com/users/1', method: 'GET' },
+    mapper: async (r) => await r.json() as User
+  },
+  {
+    config: { url: 'https://api.example.com/products/1', method: 'GET' },
+    mapper: async (r) => await r.json() as Product
+  },
+  {
+    config: { url: 'https://api.example.com/orders/1', method: 'GET' },
+    mapper: async (r) => await r.json() as Order
+  }
+], adapter);
+
+// TypeScript infers: [User, Product, Order]
+const results = await batchInstance.execute();
+const user: User = results[0];      // Type-safe access
+const product: Product = results[1]; // Type-safe access
+const order: Order = results[2];     // Type-safe access
+```
+
 ### Exported Functions
 
 - `begin<Out, AdapterExecutionResult, AdapterRequestConfig>(stage: PipelineRequestStage | PipelineManagerStage, adapter: RequestAdapter): RequestChain` - Alternative function to start a request chain (same as `RequestChain.begin`)
+- `batch<Stages, AdapterExecutionResult, RequestConfig>(stages: Stages, adapter: RequestAdapter): RequestBatch<StagesToTuple<Stages>, AdapterExecutionResult, RequestConfig>` - Convenience function to create a RequestBatch with stages and adapter already configured
+  - Automatically infers tuple types for heterogeneous batches
+  - For homogeneous batches, returns `RequestBatch<Out[], ...>` where `Out` is the common type
+  - For heterogeneous batches, returns `RequestBatch<[T1, T2, T3, ...], ...>` where each `T` is the type from the corresponding stage
 
 ### Types
 
@@ -2572,7 +2730,7 @@ By default, all adapters block potentially dangerous URLs:
 
 flow-conductor is designed for backend API services and microservice orchestration. In backend environments (Kubernetes, AWS VPC, Docker networks), services communicate using private IP addresses. The default blocking of private IPs will prevent the library from working in most enterprise infrastructure scenarios.
 
-**Recommendation**: For Node.js backend environments where you control the URLs being requested (not user-provided URLs), enable `allowPrivateIPs: true` by default. Only keep the private IP blocking enabled when the library acts as a proxy for URLs provided by end users, where SSRF protection is critical.
+For recommendations on configuring SSRF protection for backend environments, see [Best Practices](./BEST_PRACTICES.md#ssrf-protection-configuration).
 
 ```typescript
 import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
@@ -2595,42 +2753,9 @@ try {
 
 #### Configuration Options
 
-For backend services and internal microservice communication, configure validation appropriately:
-
-```typescript
-import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
-import { UrlValidationOptions } from '@flow-conductor/core';
-
-// Recommended for backend services (Kubernetes, VPC, Docker networks)
-const backendAdapter = new FetchRequestAdapter({
-  allowPrivateIPs: true  // Required for internal service communication
-});
-
-// Allow localhost for local development
-const devAdapter = new FetchRequestAdapter({
-  allowLocalhost: true
-});
-
-// For user-facing proxies (where SSRF protection is critical)
-// Keep default blocking enabled - do NOT set allowPrivateIPs: true
-const proxyAdapter = new FetchRequestAdapter();
-
-// Custom protocol allowlist
-const customAdapter = new FetchRequestAdapter({
-  allowedProtocols: ['http:', 'https:', 'ws:', 'wss:']
-});
-```
+For backend services and internal microservice communication, configure validation appropriately. See [Best Practices](./BEST_PRACTICES.md#ssrf-protection-configuration) for detailed configuration examples and recommendations.
 
 **⚠️ WARNING**: Disabling or relaxing URL validation can expose your application to SSRF attacks. Only do this if you fully understand the security implications and trust all URL inputs.
-
-#### Disabling Validation (Not Recommended)
-
-```typescript
-// ⚠️ SECURITY RISK: Only use in trusted environments
-const unsafeAdapter = new FetchRequestAdapter({
-  disableValidation: true
-});
-```
 
 For more security information, see [SECURITY.md](./SECURITY.md).
 
@@ -2638,87 +2763,11 @@ For more security information, see [SECURITY.md](./SECURITY.md).
 
 **Important**: flow-conductor does **not** set default timeouts for requests. You must configure timeouts manually to prevent requests from hanging indefinitely.
 
-#### Fetch Adapter Timeout
+For detailed timeout configuration examples and best practices, see [Best Practices](./BEST_PRACTICES.md#request-timeouts).
 
-```typescript
-import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
+## Best Practices
 
-const adapter = new FetchRequestAdapter();
-
-// Node.js 18+ - Using AbortSignal.timeout()
-const result = await begin(
-  {
-    config: {
-      url: 'https://api.example.com/users',
-      method: 'GET',
-      signal: AbortSignal.timeout(5000) // 5 second timeout
-    }
-  },
-  adapter
-).execute();
-
-// Browser or older Node.js - Using AbortController
-const controller = new AbortController();
-const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-try {
-  const result = await begin(
-    {
-      config: {
-        url: 'https://api.example.com/users',
-        method: 'GET',
-        signal: controller.signal
-      }
-    },
-    adapter
-  ).execute();
-} finally {
-  clearTimeout(timeoutId);
-}
-```
-
-#### Axios Adapter Timeout
-
-```typescript
-import { AxiosRequestAdapter } from '@flow-conductor/adapter-axios';
-
-const adapter = new AxiosRequestAdapter();
-
-const result = await begin(
-  {
-    config: {
-      url: 'https://api.example.com/users',
-      method: 'GET',
-      timeout: 5000 // 5 second timeout (in milliseconds)
-    }
-  },
-  adapter
-).execute();
-```
-
-#### Superagent Adapter Timeout
-
-```typescript
-import { SuperagentRequestAdapter } from '@flow-conductor/adapter-superagent';
-
-const adapter = new SuperagentRequestAdapter();
-
-const result = await begin(
-  {
-    config: {
-      url: 'https://api.example.com/users',
-      method: 'GET',
-      timeout: 5000 // 5 second timeout (in milliseconds)
-    }
-  },
-  adapter
-).execute();
-```
-
-**Best Practice**: Always set appropriate timeouts based on your use case:
-- **API requests**: 5-30 seconds
-- **File uploads**: 30-120 seconds
-- **Long-running operations**: Configure per-operation
+For production-ready configuration, security recommendations, and best practices, see [BEST_PRACTICES.md](./BEST_PRACTICES.md).
 
 ## Troubleshooting
 
@@ -2823,7 +2872,7 @@ mapper: (result) => {
 
 ### Getting Help
 
-- Check the [examples](#common-patterns) section for common use cases
+- Check the [PATTERNS.md](./PATTERNS.md) file for common use cases and examples
 - Review the [API Reference](#api-reference) for detailed method signatures
 - Open an issue on [GitHub](https://github.com/dawidhermann/flow-conductor)
 
