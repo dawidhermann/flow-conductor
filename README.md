@@ -4,11 +4,13 @@
 
 Stop writing spaghetti code for complex API workflows. Flow-conductor gives you a declarative, type-safe way to orchestrate sequential HTTP operations with built-in error handling, compensation, and observability.
 
+> **🤔 Not sure if flow-conductor is right for your use case?** See the [comparison section](#flow-conductor-vs-alternatives) below or check the [detailed comparison in the documentation](./DOCUMENTATION.md#important-durability-and-crash-recovery) to understand when to use flow-conductor vs Temporal, Step Functions, Inngest, and other workflow solutions.
+
 ## Quick Start
 
 ### Example: Stripe Webhook Processing
 
-**Without flow-conductor** - 80+ lines of error handling spaghetti:
+**Without flow-conductor**:
 
 ```typescript
 app.post('/webhook/stripe', async (req, res) => {
@@ -95,49 +97,75 @@ async function processStripeWebhook(body: string, signature: string) {
   )
     .next({
       config: async (prev) => {
-        // prev is the validated event from step 1
+        // prev is the validated event from step 1 (mapped result)
         // This demonstrates sequential dependency - step 2 uses step 1's result
         return { url: `/orders/by-payment/${prev.data.object.id}` };
+      },
+      mapper: async (response) => {
+        // Accumulator pattern: return object with order for later steps
+        const order = await response.json();
+        return { order };
       }
     })
     .next({
       config: async (prev) => {
-        const order = await prev.json();
+        // prev is { order } from step 2 (accumulated result)
         return {
-          url: `/orders/${order.id}`,
+          url: `/orders/${prev.order.id}`,
           method: 'PATCH',
           data: { status: 'paid' }
         };
+      },
+      mapper: async (response, prev) => {
+        // Accumulator pattern: mapper receives prev as second parameter
+        // Keep order in accumulator, add updated order response
+        const updatedOrder = await response.json();
+        return { ...prev, updatedOrder };
       }
     })
     .next({
       config: async (prev) => {
-        const order = await prev.json();
+        // prev is { order, updatedOrder } from step 3 (accumulated result)
         return {
           url: '/inventory/reserve',
           method: 'POST',
-          data: { orderId: order.id }
+          data: { orderId: prev.order.id } // Use order from accumulator
         };
+      },
+      mapper: async (response, prev) => {
+        // Accumulator pattern: keep previous data, add inventory response
+        const inventory = await response.json();
+        return { ...prev, inventory };
       }
     })
     .next({
       config: async (prev) => {
-        const order = await prev.json();
+        // prev is { order, updatedOrder, inventory } from step 4 (accumulated result)
         return {
           url: '/emails/send',
           method: 'POST',
-          data: { to: order.customer.email, template: 'order-confirmation' }
+          data: { to: prev.order.customer.email, template: 'order-confirmation' } // Use order from accumulator
         };
+      },
+      mapper: async (response, prev) => {
+        // Accumulator pattern: keep previous data, add email response
+        const email = await response.json();
+        return { ...prev, email };
       }
     })
     .next({
       config: async (prev) => {
-        const order = await prev.json();
+        // prev is { order, updatedOrder, inventory, email } from step 5 (accumulated result)
         return {
           url: '/shipping/create-label',
           method: 'POST',
-          data: { orderId: order.id }
+          data: { orderId: prev.order.id } // Use order from accumulator
         };
+      },
+      mapper: async (response, prev) => {
+        // Accumulator pattern: keep previous data, add shipping response
+        const shipping = await response.json();
+        return { ...prev, shipping };
       }
     })
     .withErrorHandler(async (error) => {
@@ -150,39 +178,6 @@ async function processStripeWebhook(body: string, signature: string) {
     })
     .execute();
 }
-```
-
-### Example: OAuth Flow
-
-```typescript
-import { begin } from '@flow-conductor/core';
-import { FetchRequestAdapter } from '@flow-conductor/adapter-fetch';
-
-const adapter = new FetchRequestAdapter();
-
-const userData = await begin(
-  {
-    config: {
-      url: 'https://api.example.com/auth/login',
-      method: 'POST',
-      data: { username: 'user', password: 'pass' }
-    }
-  },
-  adapter
-)
-  .next({
-    config: async (previousResult) => {
-      const auth = await previousResult.json();
-      return {
-        url: 'https://api.example.com/user/profile',
-        method: 'GET',
-        headers: { Authorization: `Bearer ${auth.token}` }
-      };
-    }
-  })
-  .execute();
-
-console.log(await userData.json());
 ```
 
 ### Simple Example
@@ -235,7 +230,7 @@ begin(
 ```typescript
 // Mock adapter, test each step independently
 const mockAdapter = new MockRequestAdapter();
-const chain = createWebhookChain(mockAdapter);
+createWebhookChain(mockAdapter);
 // Test without hitting real APIs
 ```
 
