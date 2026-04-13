@@ -20,7 +20,7 @@
   "dependencies": {
     "@flow-conductor/core": "^1.0.0",
     "@flow-conductor/adapter-axios": "^1.0.0",
-    "axios": "^1.7.9"
+    "axios": "^1.15.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
